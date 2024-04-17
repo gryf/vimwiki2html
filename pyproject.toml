@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vimwiki2html"
+dynamic = ["version"]
+authors = [
+    {name = "Roman Dobosz", email = "gryf73@gmail.com"}
+]
+license = {text = "GPLv3"}
+description = "Parse and generate html out of vimwiki source files"
+readme = "README.rst"
+requires-python = ">=3.11"
+keywords = ["vimwiki", "wiki", "parser", "html"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Terminals",
+    "Topic :: Utilities",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3 :: Only"
+]
+dependencies = [ ]
+
+[project.urls]
+Homepage = "https://github.com/gryf/vimwiki2html"
+
+[project.scripts]
+vw2html = "vw2html.cli:main"
+
+#[tool.setuptools]
+#py-modules = ["vw2html"]
+
+[tool.setuptools]
+packages = ["vw2html"]
+
+[tool.setuptools.dynamic]
+version = {attr = "vw2html.__version__"}
+
+[tool.distutils.bdist_wheel]
+universal = true
+
+[tool.ruff.lint]
+select = ["ALL", 'E']
+#ignore = ["Q", "COM812", "ANN", "D", "PTH"]
