@@ -1,19 +1,34 @@
+#!/usr/bin/env python
 """
-Vimwiki autoload plugin file
-Description: HTML export
-Home: https://github.com/vimwiki/vimwiki/
+This is translation from vimwiki html export file to python
 """
+import os
+import re
 
+# XXX: change to real path from commandline
+ROOT = os.path.expanduser("~/vimwiki")
+
+vimwiki_vars = {}
+
+
+class Generic:
+    """
+    generic namespace
+    """
+    pass
+
+s = Generic()
+g = Generic()
 
 # FIXME: Magics: Why not use the current syntax highlight
 # This is due to historical copy paste and laziness of markdown user
 # text: *strong*
 # default_syntax.rxBold = '\*[^*]\+\*'
-s_rxBold = '\%(^\|\s\|[[:punct:]]\)\@<=\*\%([^*`[:space:]][^*`]*[^*`[:space:]]\|[^*`[:space:]]\)\*\%([[:punct:]]\|\s\|$\)\@='
+s_rxBold = (r'\%(^\|\s\|[[:punct:]]\)\@<=\*\%([^*`[:space:]][^*`]*[^*`'
+            r'[:space:]]\|[^*`[:space:]]\)\*\%([[:punct:]]\|\s\|$\)\@=')
 
 # text: _emphasis_ or *emphasis*
 s_rxItalic = '\%(^\|\s\|[[:punct:]]\)\@<=_\%([^_`[:space:]][^_`]*[^_`[:space:]]\|[^_`[:space:]]\)_\%([[:punct:]]\|\s\|$\)\@='
-
 
 # text: $ equation_inline $
 s_rxEqIn = '\$[^$`]\+\$'
@@ -32,7 +47,7 @@ s_rxSubScript = ',,[^,`]\+,,'
 
 
 def s_root_path(subdir):
-    return repeat('../', len(split(a:subdir, '[/\\]')))
+    return os.path.relpath(ROOT, os.path.join(ROOT, subdir))
 
 
 def s_syntax_supported():
@@ -40,139 +55,142 @@ def s_syntax_supported():
 
 
 def s_remove_blank_lines(lines):
-    while !empty(a:lines) && a:lines[-1] =~# '^\s*$'
-        call remove(a:lines, -1)
+    while len(lines) and lines[-1].strip() == '':
+        del lines[-1]
 
 
 def s_is_web_link(lnk):
-    if a:lnk =~# '^\%(https://\|http://\|www.\|ftp://\|file://\|mailto:\)'
-        return 1
-    return 0
-
-
-def s_is_img_link(lnk):
-    if tolower(a:lnk) =~# '\.\%(png\|jpg\|gif\|jpeg\)$'
-        return 1
-    return 0
-
-
-def s_has_abs_path(fname):
-    if a:fname =~# '\(^.:\)\|\(^/\)'
-        return 1
-    return 0
-
-
-def s_find_autoload_file(name):
-    for path in split(&runtimepath, ',')
-        fname = path.'/autoload/vimwiki/'.a:name
-        match = glob(fname)
-        if match !=? ''
-            return match
-    return ''
-
-
-def s_default_CSS_full_name(path):
-    path = expand(a:path)
-    css_full_name = path . vimwiki#vars#get_wikilocal('css_name')
-    return css_full_name
-
-
-def s_create_default_CSS(path):
-    css_full_name = s_default_CSS_full_name(a:path)
-    if glob(css_full_name) ==? ''
-        call vimwiki#path#mkdir(fnamemodify(css_full_name, ':p:h'))
-        default_css = s_find_autoload_file('style.css')
-        if default_css !=? ''
-            lines = readfile(default_css)
-            call writefile(lines, css_full_name)
+    # originally there was regexp for searhing shemas in string; looking for
+    # parts of the string should be faster - check that
+    #re_schema = re.compile(r'^\%(https://\|http://\|www.\|ftp://\|'
+    #                       r'file://\|mailto:\)')
+    #return re_schema.match(lnk)
+    for schema in ('https://', 'http://', 'www.', 'ftp://', 'file://',
+                   'mailto'):
+        if schema in lnk.lower():
             return 1
     return 0
 
 
+def s_is_img_link(lnk):
+    # originally there was regexp for searhing shemas in string; looking for
+    # parts of the string should be faster - check that
+    #re_schema = re.compile(r'\.\%(png\|jpg\|gif\|jpeg\)$')
+    #return re_schema.match(lnk)
+    for ext in ('.png', '.jpg', '.jpeg', '.gif'):
+        if ext in lnk.lower():
+            return 1
+    return 0
+
+
+#XXX not used
+#def s_has_abs_path(fname):
+#    if a:fname =~# '\(^.:\)\|\(^/\)'
+#        return 1
+#    return 0
+
+
+def s_find_autoload_file(name):
+    return os.path.join(ROOT, name)
+
+
+def s_default_CSS_full_name(path):
+    # XXX: get the path for css file out of config. this must be aligned with
+    # ROOT - so right css file for right wiki.
+    return os.path.join(ROOT, 'style.css')
+
+
+def s_create_default_CSS(path):
+    # XXX: provide css file as a copy of original one to the output dir
+    #css_full_name = s_default_CSS_full_name(a:path)
+    #if glob(css_full_name) ==? ''
+    #    call vimwiki#path#mkdir(fnamemodify(css_full_name, ':p:h'))
+    #    default_css = s_find_autoload_file('style.css')
+    #    if default_css !=? ''
+    #        lines = readfile(default_css)
+    #        call writefile(lines, css_full_name)
+    #        return 1
+    return 0
+
+
 def s_template_full_name(name):
-    name = a:name
-    if name ==? ''
-        name = vimwiki#vars#get_wikilocal('template_default')
+    # XXX: provide template file path out of vim config
+    #name = a:name
+    #if name ==? ''
+    #    name = vimwiki#vars#get_wikilocal('template_default')
 
-    # Suffix Path by a / is not
-    path = vimwiki#vars#get_wikilocal('template_path')
-    if strridx(path, '/') +1 != len(path)
-        path .= '/'
+    ## Suffix Path by a / is not
+    #path = vimwiki#vars#get_wikilocal('template_path')
+    #if strridx(path, '/') +1 != len(path)
+    #    path .= '/'
 
-    ext = vimwiki#vars#get_wikilocal('template_ext')
+    #ext = vimwiki#vars#get_wikilocal('template_ext')
 
-    fname = expand(path . name . ext)
+    #fname = expand(path . name . ext)
 
-    if filereadable(fname)
-        return fname
-    else
-        return ''
+    #if filereadable(fname)
+    #    return fname
+    #else
+    #    return ''
+    return ''
 
 
 def s_get_html_template(template):
     # TODO: refactor it!!!
     lines=[]
 
-    if a:template !=? ''
-        template_name = s_template_full_name(a:template)
-        try
-            lines = readfile(template_name)
-            return lines
-        catch /E484/
-            call vimwiki#u#echo('HTML template '.template_name. ' does not exist!')
+    template_name = os.path.join(ROOT, 'default.tpl')
+    if template:
+        template_name = template_full_name(template)
 
-    default_tpl = s_template_full_name('')
-
-    if default_tpl ==? ''
-        default_tpl = s_find_autoload_file('default.tpl')
-
-    lines = readfile(default_tpl)
-    return lines
+    with open(template_name) as fobj:
+        return fobj.read()
 
 
-def s_safe_html_preformatted(line):
-    line = substitute(a:line,'<','\&lt;', 'g')
-    line = substitute(line,'>','\&gt;', 'g')
+def safe_html_preformatted(line):
+    line = line.replace('<', '\&lt;')
+    line = line.replace('>', '\&gt;')
     return line
 
 
 def s_escape_html_attribute(string):
-    return substitute(a:string, '"', '\&quot;', 'g')
+    return string.replace('"', '\&quot;')
 
 
 def s_safe_html_line(line):
     # escape & < > when producing HTML text
-    # s_lt_pattern, s_gt_pattern depend on g:vimwiki_valid_html_tags
+    # s:lt_pattern, s:gt_pattern depend on g:vimwiki_valid_html_tags
     # and are set in vimwiki#html#Wiki2HTML()
-    line = substitute(a:line, '&', '\&amp;', 'g')
-    line = substitute(line,s_lt_pattern,'\&lt;', 'g')
-    line = substitute(line,s_gt_pattern,'\&gt;', 'g')
-
+    line = line.replace('&', '\&amp;')
+    line = re.sub(s.lt_pattern, '\&lt;', line)
+    line = re.sub(s.gt_pattern, '\&gt;', line)
     return line
 
 
 def s_delete_html_files(path):
-    htmlfiles = split(glob(a:path.'**/*.html'), '\n')
-    for fname in htmlfiles
-        # ignore user html files, e.g. search.html,404.html
-        if stridx(vimwiki#vars#get_global('user_htmls'), fnamemodify(fname, ':t')) >= 0
-            continue
+    wiki_fnames = []
+    for root, dirs, files in os.walk(ROOT):
+        for fname in files:
+            if fname.lower().endswith('.wiki'):
+                fname = os.path.splitext(fname)[0] + '.html'
+                fname = os.path.relpath(fname, ROOT)
+                fname = os.path.join(path, fname)
+                wiki_fnames.append(fname)
+    # XXX: add user html files to excluded list
+    # ignore user html files, e.g. search.html,404.html
+    #if stridx(vimwiki#vars#get_global('user_htmls'), fnamemodify(fname, ':t')) >= 0
+    #          continue
 
-        # delete if there is no corresponding wiki file
-        subdir = vimwiki#base#subdir(vimwiki#vars#get_wikilocal('path_html'), fname)
-        wikifile = vimwiki#vars#get_wikilocal('path').subdir.
-                    \fnamemodify(fname, ':t:r').vimwiki#vars#get_wikilocal('ext')
-        if filereadable(wikifile)
-            continue
-
-        try
-            call delete(fname)
-        catch
-            call vimwiki#u#error('Cannot delete '.fname)
-
+    for root, dirs, files in os.walk(path):
+        for fname in files:
+            fullpath = os.path.join(root, fname)
+            if fullpath in wiki_fnames:
+                continue
+            # XXX: egazmine, if all seleted files should be removed
+            print(f'rm {fullpath}')
 
 def s_mid(value, cnt):
-    return strpart(a:value, a:cnt, len(a:value) - 2 * a:cnt)
+    return value[cnt:-cnt]
 
 
 def s_subst_func(line, regexp, func, ...):
@@ -180,36 +198,34 @@ def s_subst_func(line, regexp, func, ...):
     # func(matched) function.
 
     pos = 0
-    lines = split(a:line, a:regexp, 1)
+    lines = split(line, regexp, 1)
     res_line = ''
-    for line in lines
+    for line in lines:
         res_line = res_line.line
-        matched = matchstr(a:line, a:regexp, pos)
-        if matched !=? ''
-            if a:0
-                res_line = res_line.{a:func}(matched, a:1)
-            else
-                res_line = res_line.{a:func}(matched)
-        pos = matchend(a:line, a:regexp, pos)
+        matched = matchstr(line, regexp, pos)
+        if matched:
+            if args[0]:
+                res_line += func(matched, 1)
+            else:
+                res_line += func(matched)
+        pos = matchend(line, regexp, pos)
     return res_line
 
 
 def s_process_date(placeholders, default_date):
-    if !empty(a:placeholders)
-        for [placeholder, row, idx] in a:placeholders
-            [type, param] = placeholder
-            if type ==# 'date' && !empty(param)
+    if placeholders:
+        for (type_, param), row, idx in placeholders:
+            if type_.lower() == 'date' and param:
                 return param
-    return a:default_date
+    return default_date
 
 
 def s_process_title(placeholders, default_title):
-    if !empty(a:placeholders)
-        for [placeholder, row, idx] in a:placeholders
-            [type, param] = placeholder
-            if type ==# 'title' && !empty(param)
+    if placeholders:
+        for (type_, param), row, idx in placeholders:
+            if type_.lower() == 'title' and param:
                 return param
-    return a:default_title
+    return default_title
 
 
 def s_is_html_uptodate(wikifile):
@@ -612,65 +628,64 @@ def s_close_tag_table(table, ldest, header_ids):
 
         # Get max cells
         max_cells = 0
-        for row in table[1:]
+        for row in table[1:]:
             n_cells = len(row)
-            if n_cells > max_cells
+            if n_cells > max_cells:
                 max_cells = n_cells
-            end
 
         # Sum rowspan
-        for cell_idx in range(max_cells)
+        for cell_idx in range(max_cells):
             rows = 1
 
-            for row_idx in range(len(table)-1, 1, -1)
-                if cell_idx >= len(table[row_idx])
+            for row_idx in range(len(table)-1, 1, -1):
+                if cell_idx >= len(table[row_idx]):
                     rows = 1
                     continue
 
-                if table[row_idx][cell_idx].rowspan == 0
+                if table[row_idx][cell_idx].rowspan == 0:
                     rows += 1
-                else " table[row_idx][cell_idx].rowspan == 1
+                else:  # table[row_idx][cell_idx].rowspan == 1
                     table[row_idx][cell_idx].rowspan = rows
                     rows = 1
 
     def s_sum_colspan(table):
-        for row in a:table[1:]
+        for row in table[1:]:
             cols = 1
 
-            for cell_idx in range(len(row)-1, 0, -1)
-                if row[cell_idx].colspan == 0
+            for cell_idx in range(len(row)-1, 0, -1):
+                if row[cell_idx].colspan == 0:
                     cols += 1
-                else "row[cell_idx].colspan == 1
+                else:  # row[cell_idx].colspan == 1
                     row[cell_idx].colspan = cols
                     cols = 1
 
     def s_close_tag_row(row, header, ldest, header_ids):
-        call add(a:ldest, '<tr>')
+        ldest.append('<tr>')
 
         # Set tag element of columns
-        if a:header
+        if header:
             tag_name = 'th'
-        else
+        else:
             tag_name = 'td'
-        end
 
         # Close tag of columns
-        for cell in a:row
-            if cell.rowspan == 0 || cell.colspan == 0
+        for cell in row:
+            if cell.rowspan == 0 or cell.colspan == 0:
                 continue
 
-            if cell.rowspan > 1
-                rowspan_attr = ' rowspan="' . cell.rowspan . '"'
-            else "cell.rowspan == 1
+            if cell.rowspan > 1:
+                rowspan_attr = f' rowspan="{cell.rowspan}"'
+            else:  # cell.rowspan == 1
                 rowspan_attr = ''
-            if cell.colspan > 1
-                colspan_attr = ' colspan="' . cell.colspan . '"'
-            else "cell.colspan == 1
+
+            if cell.colspan > 1:
+                colspan_attr = f' colspan="{cell.colspan}"'
+            else:  # cell.colspan == 1
                 colspan_attr = ''
 
-            call add(a:ldest, '<' . tag_name . rowspan_attr . colspan_attr .'>')
-            call add(a:ldest, s_process_inline_tags(cell.body, a:header_ids))
-            call add(a:ldest, '</'. tag_name . '>')
+            ldest.append(f'<{tag_name}{rowspan_attr}{colspan_attr}>')
+            ldest.append(s_process_inline_tags(cell.body, a:header_ids))
+            ldest.append('</{tag_name}>')
 
         call add(a:ldest, '</tr>')
 
@@ -1123,24 +1138,23 @@ def s_process_tag_table(line, table, header_ids):
     return [processed, lines, table]
 
 
-def s_parse_line(line, state):
-    state = {}
-    state.para = a:state.para
-    state.quote = a:state.quote
-    state.arrow_quote = a:state.arrow_quote
-    state.active_multiline_comment = a:state.active_multiline_comment
-    state.list_leading_spaces = a:state.list_leading_spaces
-    state.pre = a:state.pre[:]
-    state.math = a:state.math[:]
-    state.table = a:state.table[:]
-    state.lists = a:state.lists[:]
-    state.deflist = a:state.deflist
-    state.placeholder = a:state.placeholder
-    state.header_ids = a:state.header_ids
+def parse_line(line, state):
+    state = Generic()
+    state.para = state.para
+    state.quote = state.quote
+    state.arrow_quote = state.arrow_quote
+    state.active_multiline_comment = state.active_multiline_comment
+    state.list_leading_spaces = state.list_leading_spaces
+    state.pre = state.pre[:]
+    state.math = state.math[:]
+    state.table = state.table[:]
+    state.lists = state.lists[:]
+    state.deflist = state.deflist
+    state.placeholder = state.placeholder
+    state.header_ids = state.header_ids
 
     res_lines = []
     processed = 0
-    line = a:line
 
     # Handle multiline comments, keeping in mind that they can mutate the
     # current line while not marking as processed in the scenario where some
@@ -1436,10 +1450,12 @@ def s_convert_file_to_lines(wikifile, current_html_file):
 
     # the currently processed file name is needed when processing links
     # yeah yeah, shame on me for using (quasi-) global variables
-    s_current_wiki_file = a:wikifile
-    s_current_html_file = a:current_html_file
+    s_current_wiki_file = wikifile
+    s_current_html_file = current_html_file
 
-    lsource = readfile(a:wikifile)
+    with open(wikifile) as f:
+        lsource = f.read().split('\n')
+
     ldest = []
 
     # nohtml placeholder -- to skip html generation.
@@ -1452,78 +1468,89 @@ def s_convert_file_to_lines(wikifile, current_html_file):
     placeholders = []
 
     # current state of converter
-    state = {}
+    state = Generic()
     state.para = 0
     state.quote = 0
     state.arrow_quote = 0
     state.active_multiline_comment = 0
     state.list_leading_spaces = 0
-    state.pre = [0, 0] " [in_pre, indent_pre]
-    state.math = [0, 0] " [in_math, indent_math]
+    state.pre = [0, 0]  # [in_pre, indent_pre]
+    state.math = [0, 0]  # [in_math, indent_math]
     state.table = []
     state.deflist = 0
     state.lists = []
     state.placeholder = []
     state.header_ids = [['', 0], ['', 0], ['', 0], ['', 0], ['', 0], ['', 0]]
-             # [last seen header text in this level, number]
+    # [last seen header text in this level, number]
 
     # Cheat, see cheaters who access me
-    g:state = state
+    g.state = state
 
     # prepare constants for s_safe_html_line()
     s_lt_pattern = '<'
     s_gt_pattern = '>'
-    if vimwiki#vars#get_global('valid_html_tags') !=? ''
-        tags = join(split(vimwiki#vars#get_global('valid_html_tags'), '\s*,\s*'), '\|')
-        s_lt_pattern = '\c<\%(/\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?>\)\@!'
-        s_gt_pattern = '\c\%(</\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?\)\@<!>'
+    # defaults: 'b,i,s,u,sub,sup,kbd,br,hr' - those tags should not be touched
+    #if vimwiki#vars#get_global('valid_html_tags') !=? ''
+    #    tags = "\|".join([x.strip() for x in
+    #                      vimwiki_vars.get_global('valid_html_tags')
+    #                      .split(',')])
+    #    s_lt_pattern = '\c<\%(/\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?>\)\@!'
+    #    s_gt_pattern = '\c\%(</\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?\)\@<!>'
 
     # prepare regexps for lists
-    s_bullets = vimwiki#vars#get_wikilocal('rx_bullet_char')
-    s_numbers = '\C\%(#\|\d\+)\|\d\+\.\|[ivxlcdm]\+)\|[IVXLCDM]\+)\|\l\{1,2})\|\u\{1,2})\)'
+    s_bullets = ['-', '*', '#']
+    s_numbers = (r'('
+                 r'#|\d+\)|'
+                 r'\d+\.|'
+                 r'[ivxlcdm]+\)|'
+                 r'[IVXLCDM]+\)|'
+                 r'[a-z]{1,2}\)|'
+                 r'[A-Z]{1,2}\)'
+                 ')')
 
-    for line in lsource
+    for line in lsource:
         oldquote = state.quote
-        [lines, state] = s_parse_line(line, state)
+        lines, state = parse_line(line, state)
 
-        # Hack: There could be a lot of empty strings before s_process_tag_precode
-        # find out `quote` is over. So we should delete them all. Think of the way
-        # to refactor it out.
-        if oldquote != state.quote
-            call s_remove_blank_lines(ldest)
+        # Hack: There could be a lot of empty strings before
+        # process_tag_precode find out `quote` is over. So we should delete
+        # them all. Think of the way to refactor it out.
+        if oldquote != state.quote:
+            s_remove_blank_lines(ldest)
 
-        if !empty(state.placeholder)
-            if state.placeholder[0] ==# 'nohtml'
+        if state.placeholder:
+            if state.placeholder[0].lower() == 'nohtml':
                 nohtml = 1
                 break
-            elseif state.placeholder[0] ==# 'template'
+            elif state.placeholder[0].lower() == 'template':
                 template_name = state.placeholder[1]
-            else
-                call add(placeholders, [state.placeholder, len(ldest), len(placeholders)])
+            else:
+                placeholders.append([state.placeholder, len(ldest),
+                                     len(placeholders)])
             state.placeholder = []
 
-        call extend(ldest, lines)
-
+        ldest.extend(lines)
 
     result['nohtml'] = nohtml
-    if nohtml
-        call vimwiki#u#echo("\r".'%nohtml placeholder found', '', 'n')
+
+    if nohtml:
+        print('nohtml placeholder found')
         return result
 
-    call s_remove_blank_lines(ldest)
+    s_remove_blank_lines(ldest)
 
     # process end of file
     # close opened tags if any
     lines = []
-    call s_close_tag_precode(state.quote, lines)
-    call s_close_tag_arrow_quote(state.arrow_quote, lines)
-    call s_close_tag_para(state.para, lines)
-    call s_close_tag_pre(state.pre, lines)
-    call s_close_tag_math(state.math, lines)
-    call s_close_tag_list(state.lists, lines)
-    call s_close_tag_def_list(state.deflist, lines)
-    call s_close_tag_table(state.table, lines, state.header_ids)
-    call extend(ldest, lines)
+    s_close_tag_precode(state.quote, lines)
+    s_close_tag_arrow_quote(state.arrow_quote, lines)
+    s_close_tag_para(state.para, lines)
+    s_close_tag_pre(state.pre, lines)
+    s_close_tag_math(state.math, lines)
+    s_close_tag_list(state.lists, lines)
+    s_close_tag_def_list(state.deflist, lines)
+    s_close_tag_table(state.table, lines, state.header_ids)
+    ldest.extend(lines)
 
     result['html'] = ldest
 
@@ -1777,4 +1804,10 @@ def vimwiki#html#diary_rss():
     call vimwiki#u#echo('Saving RSS feed ...')
     path_html = expand(vimwiki#vars#get_wikilocal('path_html'))
     call vimwiki#path#mkdir(path_html)
-    call s_generate_rss(path_html)
+    call s:generate_rss(path_html)
+
+def main():
+    print('foo')
+
+if __name__ == '__main__':
+    main()
