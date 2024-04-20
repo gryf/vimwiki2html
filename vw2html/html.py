@@ -5,8 +5,9 @@ This is translation from vimwiki html export file to python
 import os
 import re
 
-# XXX: change to real path from commandline
+# XXX: change to real paths from commandline args
 ROOT = os.path.expanduser("~/vimwiki")
+OUTPUT_DIR = os.path.expanduser("~/vimwiki_html")
 
 vimwiki_vars = {}
 
@@ -193,7 +194,7 @@ def s_mid(value, cnt):
     return value[cnt:-cnt]
 
 
-def s_subst_func(line, regexp, func, ...):
+def s_subst_func(line, regexp, func, *args):
     # Substitute text found by regexp with result of
     # func(matched) function.
 
@@ -204,7 +205,7 @@ def s_subst_func(line, regexp, func, ...):
         res_line = res_line.line
         matched = matchstr(line, regexp, pos)
         if matched:
-            if args[0]:
+            if args and args[0]:
                 res_line += func(matched, 1)
             else:
                 res_line += func(matched)
@@ -232,22 +233,17 @@ def s_is_html_uptodate(wikifile):
     tpl_time = -1
 
     tpl_file = s_template_full_name('')
-    if tpl_file !=? ''
-        tpl_time = getftime(tpl_file)
+    if tpl_file != '':
+        tpl_time = os.stat(tpl_file).st_mtime
 
-    wikifile = fnamemodify(a:wikifile, ':p')
+    wikifile = os.path.abspath(os.path.join(ROOT, wikifile))
+    wiki_time = os.stat(wikifile).st_mtime
 
-    if vimwiki#vars#get_wikilocal('html_filename_parameterization')
-        parameterized_wikiname = s_parameterized_wikiname(wikifile)
-        htmlfile = expand(vimwiki#vars#get_wikilocal('path_html') .
-                    \ vimwiki#vars#get_bufferlocal('subdir') . parameterized_wikiname)
-    else
-        htmlfile = expand(vimwiki#vars#get_wikilocal('path_html') .
-                    \ vimwiki#vars#get_bufferlocal('subdir') . fnamemodify(wikifile, ':t:r').'.html')
+    htmlfile = os.path.join(OUTPUT_DIR, os.path.splitext(wikifile) + '.html')
+    html_time = os.stat(htmlfile).st_mtime
 
-    if getftime(wikifile) <= getftime(htmlfile) && tpl_time <= getftime(htmlfile)
-        return 1
-    return 0
+    return wiki_time <= html_time and tpl_time <= html_time
+
 
 def s_parameterized_wikiname(wikifile):
     initial = fnamemodify(a:wikifile, ':t:r')
