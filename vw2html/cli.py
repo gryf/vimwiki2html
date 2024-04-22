@@ -54,6 +54,32 @@ class VimWiki2HTMLConverter:
         if args.css:
             self._css_fname = args.css
 
+    def convert(self):
+        # copy css file
+        if self._css_fname:
+            if os.path.isabs(self._css_fname):
+                shutil.copy(self._css_fname, self._www_path)
+            else:
+                os.makedirs(self._www_path, os.path.dirname(self._css_fname))
+                shutil.copy(os.path.join(self._wiki_path, self._css_fname),
+                            os.path.join(self._www_path, self._css_fname))
+
+        if self._wiki_filepath:
+            fname = os.path.splitext(os.path.basename(self._wiki_filepath))[0]
+            fname = os.path.join(self._www_path, fname + '.html')
+            data = {fname: vw2html.html.s_convert_file(self._wiki_filepath)}
+
+        else:
+            for root, dirs, files in os.walk(self._wiki_path):
+                for fname in files:
+                    vw2html.html.s_convert_file(os.path.join(root, fname))
+
+        for fname in data:
+            with open(fname, 'w') as fobj:
+                html = '\n'.join(data[fname]['html'])
+                fobj.write(self._template.replace('%content%', html))
+        return 0
+
 
 def _validate_file_or_dir(path):
     if not os.path.exists(path):
@@ -106,7 +132,7 @@ def parse_args():
 def main():
     args = parse_args()
     converter = VimWiki2HTMLConverter(args)
-    return 0
+    return converter.convert()
 
 
 if __name__ == '__main__':
