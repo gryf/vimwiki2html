@@ -87,7 +87,7 @@ def s_is_img_link(lnk):
 
 #XXX not used
 #def s_has_abs_path(fname):
-#    if a:fname =~# '\(^.:\)\|\(^/\)'
+#    if fname =~# '\(^.:\)\|\(^/\)'
 #        return 1
 #    return 0
 
@@ -104,7 +104,7 @@ def s_default_CSS_full_name(path):
 
 def s_create_default_CSS(path):
     # XXX: provide css file as a copy of original one to the output dir
-    #css_full_name = s_default_CSS_full_name(a:path)
+    #css_full_name = s_default_CSS_full_name(path)
     #if glob(css_full_name) ==? ''
     #    call vimwiki#path#mkdir(fnamemodify(css_full_name, ':p:h'))
     #    default_css = s_find_autoload_file('style.css')
@@ -117,7 +117,7 @@ def s_create_default_CSS(path):
 
 def s_template_full_name(name):
     # XXX: provide template file path out of vim config
-    #name = a:name
+    #name = name
     #if name ==? ''
     #    name = vimwiki#vars#get_wikilocal('template_default')
 
@@ -247,7 +247,7 @@ def s_is_html_uptodate(wikifile):
 
 
 def s_parameterized_wikiname(wikifile):
-    initial = fnamemodify(a:wikifile, ':t:r')
+    initial = fnamemodify(wikifile, ':t:r')
     lower_sanitized = tolower(initial)
     substituted = substitute(lower_sanitized, '[^a-z0-9_-]\+','-', 'g')
     substituted = substitute(substituted, '\-\+','-', 'g')
@@ -257,38 +257,38 @@ def s_parameterized_wikiname(wikifile):
 
 def s_html_insert_contents(html_lines, content):
     lines = []
-    for line in a:html_lines
-        if line =~# '%content%'
-            parts = split(line, '%content%', 1)
-            if empty(parts)
-                call extend(lines, a:content)
-            else
-                for idx in range(len(parts))
-                    call add(lines, parts[idx])
-                    if idx < len(parts) - 1
-                        call extend(lines, a:content)
-        else
-            call add(lines, line)
+#    for line in html_lines
+#        if line =~# '%content%'
+#            parts = split(line, '%content%', 1)
+#            if empty(parts)
+#                call extend(lines, content)
+#            else
+#                for idx in range(len(parts))
+#                    call add(lines, parts[idx])
+#                    if idx < len(parts) - 1
+#                        call extend(lines, content)
+#        else
+#            call add(lines, line)
     return lines
 
 
 def s_tag_eqin(value):
     # mathJAX wants \( \) for inline maths
-    return '\('.s_mid(a:value, 1).'\)'
+    return '\(' + s_mid(value, 1) + '\)'
 
 
 def s_tag_em(value):
-    return '<em>'.s_mid(a:value, 1).'</em>'
+    return '<em>' + s_mid(value, 1) + '</em>'
 
 
 def s_tag_strong(value, header_ids):
-    text = s_mid(a:value, 1)
+    text = s_mid(value, 1)
     id = s_escape_html_attribute(text)
     complete_id = ''
-    for l in range(6)
-        if a:header_ids[l][0] !=? ''
-            complete_id .= a:header_ids[l][0].'-'
-    if a:header_ids[5][0] ==? ''
+    for l in range(6):
+        if header_ids[l][0] != '':
+            complete_id += header_ids[l][0] + '-'
+    if header_ids[5][0] == '':
         complete_id = complete_id[:-2]
     complete_id .= '-'.id
     return '<span id="'.s_escape_html_attribute(complete_id).'"></span><strong id="'
@@ -297,15 +297,15 @@ def s_tag_strong(value, header_ids):
 
 def s_tag_tags(value, header_ids):
     complete_id = ''
-    for level in range(6)
-        if a:header_ids[level][0] !=? ''
-            complete_id .= a:header_ids[level][0].'-'
-    if a:header_ids[5][0] ==? ''
+    for level in range(6):
+        if header_ids[level][0] != '':
+            complete_id += header_ids[level][0] + '-'
+    if header_ids[5][0] == '':
         complete_id = complete_id[:-2]
     complete_id = s_escape_html_attribute(complete_id)
 
     result = []
-    for tag in split(a:value, ':')
+    for tag in value.split(':'):
         id = s_escape_html_attribute(tag)
         call add(result, '<span id="'.complete_id.'-'.id.'"></span><span class="tag" id="'
                     \ .id.'">'.tag.'</span>')
@@ -313,26 +313,26 @@ def s_tag_tags(value, header_ids):
 
 
 def s_tag_todo(value):
-    return '<span class="todo">'.a:value.'</span>'
+    return '<span class="todo">' + value + '</span>'
 
 
 def s_tag_strike(value):
-    return '<del>'.s_mid(a:value, 2).'</del>'
+    return '<del>' + s_mid(value, 2) + '</del>'
 
 
 def s_tag_super(value):
-    return '<sup><small>'.s_mid(a:value, 1).'</small></sup>'
+    return '<sup><small>' + s_mid(value, 1) + '</small></sup>'
 
 
 def s_tag_sub(value):
-    return '<sub><small>'.s_mid(a:value, 2).'</small></sub>'
+    return '<sub><small>' + s_mid(value, 2) + '</small></sub>'
 
 
 def s_tag_code(value):
     l:retstr = '<code'
 
-    l:str = s_mid(a:value, 1)
-    l:match = match(l:str, '^#[a-fA-F0-9]\{6\}$')
+    string = s_mid(value, 1)
+    match = match(string, '^#[a-fA-F0-9]\{6\}$')
 
     if l:match != -1
         l:r = eval('0x'.l:str[1:2])
@@ -354,40 +354,40 @@ def s_tag_code(value):
 def s_incl_match_arg(nn_index):
     #       match n-th ARG within {{URL[|ARG1|ARG2|...]}}
     # *c,d,e),...
-    rx = vimwiki#vars#get_global('rxWikiInclPrefix'). vimwiki#vars#get_global('rxWikiInclUrl')
-    rx = rx . repeat(vimwiki#vars#get_global('rxWikiInclSeparator') .
-                \ vimwiki#vars#get_global('rxWikiInclArg'), a:nn_index-1)
-    if a:nn_index > 0
-        rx = rx. vimwiki#vars#get_global('rxWikiInclSeparator'). '\zs' .
-                    \ vimwiki#vars#get_global('rxWikiInclArg') . '\ze'
-    rx = rx . vimwiki#vars#get_global('rxWikiInclArgs') .
-                \ vimwiki#vars#get_global('rxWikiInclSuffix')
+    #rx = vimwiki#vars#get_global('rxWikiInclPrefix'). vimwiki#vars#get_global('rxWikiInclUrl')
+    #rx = rx . repeat(vimwiki#vars#get_global('rxWikiInclSeparator') .
+    #            \ vimwiki#vars#get_global('rxWikiInclArg'), nn_index-1)
+    #if nn_index > 0
+    #    rx = rx. vimwiki#vars#get_global('rxWikiInclSeparator'). '\zs' .
+    #                \ vimwiki#vars#get_global('rxWikiInclArg') . '\ze'
+    #rx = rx . vimwiki#vars#get_global('rxWikiInclArgs') .
+    #            \ vimwiki#vars#get_global('rxWikiInclSuffix')
     return rx
 
 
 def s_linkify_link(src, descr):
-    src_str = ' href="'.s_escape_html_attribute(a:src).'"'
-    descr = vimwiki#u#trim(a:descr)
-    descr = (descr ==? '' ? a:src : descr)
-    descr_str = (descr =~# vimwiki#vars#get_global('rxWikiIncl')
-                \ ? s_tag_wikiincl(descr)
-                \ : descr)
-    return '<a'.src_str.'>'.descr_str.'</a>'
+    #src_str = ' href="'.s_escape_html_attribute(src).'"'
+    #descr = vimwiki#u#trim(descr)
+    #descr = (descr ==? '' ? src : descr)
+    #descr_str = (descr =~# vimwiki#vars#get_global('rxWikiIncl')
+    #            \ ? s_tag_wikiincl(descr)
+    #            \ : descr)
+    return '<a' + src_str + '>' + descr_str + '</a>'
 
 
 def s_linkify_image(src, descr, verbatim_str):
-    src_str = ' src="'.a:src.'"'
-    descr_str = (a:descr !=? '' ? ' alt="'.a:descr.'"' : '')
-    verbatim_str = (a:verbatim_str !=? '' ? ' '.a:verbatim_str : '')
-    return '<img'.src_str.descr_str.verbatim_str.' />'
+    #src_str = ' src="'.src.'"'
+    #descr_str = (descr !=? '' ? ' alt="'.descr.'"' : '')
+    #verbatim_str = (verbatim_str !=? '' ? ' '.verbatim_str : '')
+    return '<img' + src_str.descr_str.verbatim_str + ' />'
 
 
 def s_tag_weblink(value):
     # Weblink Template -> <a href="url">descr</a>
-    str = a:value
-    url = matchstr(str, vimwiki#vars#get_syntaxlocal('rxWeblinkMatchUrl'))
-    descr = matchstr(str, vimwiki#vars#get_syntaxlocal('rxWeblinkMatchDescr'))
-    line = s_linkify_link(url, descr)
+    #str = value
+    #url = matchstr(str, vimwiki#vars#get_syntaxlocal('rxWeblinkMatchUrl'))
+    #descr = matchstr(str, vimwiki#vars#get_syntaxlocal('rxWeblinkMatchDescr'))
+    #line = s_linkify_link(url, descr)
     return line
 
 
@@ -396,28 +396,28 @@ def s_tag_wikiincl(value):
     # {{imgurl}}                                -> <img src="imgurl"/>
     # {{imgurl|descr|style="A"}} -> <img src="imgurl" alt="descr" style="A" />
     # {{imgurl|descr|class="B"}} -> <img src="imgurl" alt="descr" class="B" />
-    str = a:value
-    # custom transclusions
-    line = VimwikiWikiIncludeHandler(str)
-    # otherwise, assume image transclusion
-    if line ==? ''
-        url_0 = matchstr(str, vimwiki#vars#get_global('rxWikiInclMatchUrl'))
-        descr = matchstr(str, s_incl_match_arg(1))
-        verbatim_str = matchstr(str, s_incl_match_arg(2))
+    # str = value
+    # # custom transclusions
+    # line = VimwikiWikiIncludeHandler(str)
+    # # otherwise, assume image transclusion
+    # if line ==? ''
+    #     url_0 = matchstr(str, vimwiki#vars#get_global('rxWikiInclMatchUrl'))
+    #     descr = matchstr(str, s_incl_match_arg(1))
+    #     verbatim_str = matchstr(str, s_incl_match_arg(2))
 
-        link_infos = vimwiki#base#resolve_link(url_0)
+    #     link_infos = vimwiki#base#resolve_link(url_0)
 
-        if link_infos.scheme =~# '\mlocal\|wiki\d\+\|diary'
-            url = vimwiki#path#relpath(fnamemodify(s_current_html_file, ':h'), link_infos.filename)
-            # strip the .html extension when we have wiki links, so that the user can
-            # simply write {{image.png}} to include an image from the wiki directory
-            if link_infos.scheme =~# '\mwiki\d\+\|diary'
-                url = fnamemodify(url, ':r')
-        else
-            url = link_infos.filename
+    #     if link_infos.scheme =~# '\mlocal\|wiki\d\+\|diary'
+    #         url = vimwiki#path#relpath(fnamemodify(s_current_html_file, ':h'), link_infos.filename)
+    #         # strip the .html extension when we have wiki links, so that the user can
+    #         # simply write {{image.png}} to include an image from the wiki directory
+    #         if link_infos.scheme =~# '\mwiki\d\+\|diary'
+    #             url = fnamemodify(url, ':r')
+    #     else
+    #         url = link_infos.filename
 
-        url = escape(url, '#')
-        line = s_linkify_image(url, descr, verbatim_str)
+    #     url = escape(url, '#')
+    #     line = s_linkify_image(url, descr, verbatim_str)
     return line
 
 
@@ -429,78 +429,78 @@ def s_tag_wikilink(value):
     # [[dirurl/|descr]]                 -> <a href="dirurl/index.html">descr</a>
     # [[url#a1#a2]]                         -> <a href="url.html#a1-a2">url#a1#a2</a>
     # [[#a1#a2]]                                -> <a href="#a1-a2">#a1#a2</a>
-    str = a:value
-    url = matchstr(str, vimwiki#vars#get_syntaxlocal('rxWikiLinkMatchUrl'))
-    descr = matchstr(str, vimwiki#vars#get_syntaxlocal('rxWikiLinkMatchDescr'))
-    descr = vimwiki#u#trim(descr)
-    descr = (descr !=? '' ? descr : url)
+    ## str = value
+    ## url = matchstr(str, vimwiki#vars#get_syntaxlocal('rxWikiLinkMatchUrl'))
+    ## descr = matchstr(str, vimwiki#vars#get_syntaxlocal('rxWikiLinkMatchDescr'))
+    ## descr = vimwiki#u#trim(descr)
+    ## descr = (descr !=? '' ? descr : url)
 
-    line = VimwikiLinkConverter(url, s_current_wiki_file, s_current_html_file)
-    if line ==? ''
-        link_infos = vimwiki#base#resolve_link(url, s_current_wiki_file)
+    ## line = VimwikiLinkConverter(url, s_current_wiki_file, s_current_html_file)
+    ## if line ==? ''
+    ##     link_infos = vimwiki#base#resolve_link(url, s_current_wiki_file)
 
-        if link_infos.scheme ==# 'file'
-            # external file links are always absolute
-            html_link = link_infos.filename
-        elseif link_infos.scheme ==# 'local'
-            html_link = vimwiki#path#relpath(fnamemodify(s_current_html_file, ':h'),
-                        \ link_infos.filename)
-        elseif link_infos.scheme =~# '\mwiki\d\+\|diary'
-            # wiki links are always relative to the current file
-            html_link = vimwiki#path#relpath(
-                        \ fnamemodify(s_current_wiki_file, ':h'),
-                        \ fnamemodify(link_infos.filename, ':r'))
-            if html_link !~? '\m/$'
-                html_link .= '.html'
-        else " other schemes, like http, are left untouched
-            html_link = link_infos.filename
+    ##     if link_infos.scheme ==# 'file'
+    ##         # external file links are always absolute
+    ##         html_link = link_infos.filename
+    ##     elseif link_infos.scheme ==# 'local'
+    ##         html_link = vimwiki#path#relpath(fnamemodify(s_current_html_file, ':h'),
+    ##                     \ link_infos.filename)
+    ##     elseif link_infos.scheme =~# '\mwiki\d\+\|diary'
+    ##         # wiki links are always relative to the current file
+    ##         html_link = vimwiki#path#relpath(
+    ##                     \ fnamemodify(s_current_wiki_file, ':h'),
+    ##                     \ fnamemodify(link_infos.filename, ':r'))
+    ##         if html_link !~? '\m/$'
+    ##             html_link .= '.html'
+    ##     else " other schemes, like http, are left untouched
+    ##         html_link = link_infos.filename
 
-        if link_infos.anchor !=? ''
-            anchor = substitute(link_infos.anchor, '#', '-', 'g')
-            html_link .= '#'.anchor
-        line = html_link
+    ##     if link_infos.anchor !=? ''
+    ##         anchor = substitute(link_infos.anchor, '#', '-', 'g')
+    ##         html_link .= '#'.anchor
+    ##     line = html_link
 
-    line = s_linkify_link(line, descr)
+    ## line = s_linkify_link(line, descr)
     return line
 
 
 def s_tag_remove_internal_link(value):
-    value = s_mid(a:value, 2)
+    ##value = s_mid(value, 2)
 
-    line = ''
-    if value =~# '|'
-        link_parts = split(value, '|', 1)
-    else
-        link_parts = split(value, '][', 1)
+    ##line = ''
+    ##if value =~# '|'
+    ##    link_parts = split(value, '|', 1)
+    ##else
+    ##    link_parts = split(value, '][', 1)
 
-    if len(link_parts) > 1
-        if len(link_parts) < 3
-            style = ''
-        else
-            style = link_parts[2]
-        line = link_parts[1]
-    else
-        line = value
+    ##if len(link_parts) > 1
+    ##    if len(link_parts) < 3
+    ##        style = ''
+    ##    else
+    ##        style = link_parts[2]
+    ##    line = link_parts[1]
+    ##else
+    ##    line = value
     return line
 
 
 def s_tag_remove_external_link(value):
-    value = s_mid(a:value, 1)
+    ##value = s_mid(value, 1)
 
-    line = ''
-    if s_is_web_link(value)
-        lnkElements = split(value)
-        head = lnkElements[0]
-        rest = join(lnkElements[1:])
-        if rest ==? ''
-            rest = head
-        line = rest
-    elseif s_is_img_link(value)
-        line = '<img src="'.value.'" />'
-    else
-        # [alskfj sfsf] shouldn't be a link. So return it as it was --
-        # enclosed in [...]
-        line = '['.value.']'
+    ##line = ''
+    ##if s_is_web_link(value)
+    ##    lnkElements = split(value)
+    ##    head = lnkElements[0]
+    ##    rest = join(lnkElements[1:])
+    ##    if rest ==? ''
+    ##        rest = head
+    ##    line = rest
+    ##elseif s_is_img_link(value)
+    ##    line = '<img src="'.value.'" />'
+    ##else
+    ##    # [alskfj sfsf] shouldn't be a link. So return it as it was --
+    ##    # enclosed in [...]
+    ##    line = '['.value.']'
     return line
 
 
@@ -508,106 +508,106 @@ def s_make_tag(line, regexp, func, ...):
     # Make tags for a given matched regexp.
     # Exclude preformatted text and href links.
     # FIXME
-    patt_splitter = '\(`[^`]\+`\)\|'.
-                                        \ '\('.vimwiki#vars#get_syntaxlocal('rxPreStart').'.\+'.
-                                        \ vimwiki#vars#get_syntaxlocal('rxPreEnd').'\)\|'.
-                                        \ '\(<a href.\{-}</a>\)\|'.
-                                        \ '\(<img src.\{-}/>\)\|'.
-                                        \ '\(<pre.\{-}</pre>\)\|'.
-                                        \ '\('.s_rxEqIn.'\)'
+    ##patt_splitter = '\(`[^`]\+`\)\|'.
+    ##                                    \ '\('.vimwiki#vars#get_syntaxlocal('rxPreStart').'.\+'.
+    ##                                    \ vimwiki#vars#get_syntaxlocal('rxPreEnd').'\)\|'.
+    ##                                    \ '\(<a href.\{-}</a>\)\|'.
+    ##                                    \ '\(<img src.\{-}/>\)\|'.
+    ##                                    \ '\(<pre.\{-}</pre>\)\|'.
+    ##                                    \ '\('.s_rxEqIn.'\)'
 
-    #FIXME FIXME !!! these can easily occur on the same line!
-    #XXX    {{{ }}} ??? obsolete
-    if '`[^`]\+`' ==# a:regexp || '{{{.\+}}}' ==# a:regexp ||
-                \ s_rxEqIn ==# a:regexp
-        res_line = s_subst_func(a:line, a:regexp, a:func)
-    else
-        pos = 0
-        # split line with patt_splitter to have parts of line before and after
-        # href links, preformatted text
-        # ie:
-        # hello world `is just a` simple <a href="link.html">type of</a> prg.
-        # result:
-        # ['hello world ', ' simple ', 'type of', ' prg']
-        lines = split(a:line, patt_splitter, 1)
-        res_line = ''
-        for line in lines
-            if a:0
-                res_line = res_line.s_subst_func(line, a:regexp, a:func, a:1)
-            else
-                res_line = res_line.s_subst_func(line, a:regexp, a:func)
-            res_line = res_line.matchstr(a:line, patt_splitter, pos)
-            pos = matchend(a:line, patt_splitter, pos)
+    ###FIXME FIXME !!! these can easily occur on the same line!
+    ###XXX    {{{ }}} ??? obsolete
+    ##if '`[^`]\+`' ==# regexp || '{{{.\+}}}' ==# regexp ||
+    ##            \ s_rxEqIn ==# regexp
+    ##    res_line = s_subst_func(line, regexp, func)
+    ##else
+    ##    pos = 0
+    ##    # split line with patt_splitter to have parts of line before and after
+    ##    # href links, preformatted text
+    ##    # ie:
+    ##    # hello world `is just a` simple <a href="link.html">type of</a> prg.
+    ##    # result:
+    ##    # ['hello world ', ' simple ', 'type of', ' prg']
+    ##    lines = split(line, patt_splitter, 1)
+    ##    res_line = ''
+    ##    for line in lines
+    ##        if 0
+    ##            res_line = res_line.s_subst_func(line, regexp, func, 1)
+    ##        else
+    ##            res_line = res_line.s_subst_func(line, regexp, func)
+    ##        res_line = res_line.matchstr(line, patt_splitter, pos)
+    ##        pos = matchend(line, patt_splitter, pos)
     return res_line
 
 
 def s_process_tags_remove_links(line):
-    line = a:line
+    line = line
     line = s_make_tag(line, '\[\[.\{-}\]\]', 's_tag_remove_internal_link')
     line = s_make_tag(line, '\[.\{-}\]', 's_tag_remove_external_link')
     return line
 
 
 def s_process_tags_typefaces(line, header_ids):
-    line = a:line
+    line = line
     # Convert line tag by tag
-    line = s_make_tag(line, s_rxItalic, 's_tag_em')
-    line = s_make_tag(line, s_rxBold, 's_tag_strong', a:header_ids)
-    line = s_make_tag(line, vimwiki#vars#get_wikilocal('rx_todo'), 's_tag_todo')
-    line = s_make_tag(line, s_rxDelText, 's_tag_strike')
-    line = s_make_tag(line, s_rxSuperScript, 's_tag_super')
-    line = s_make_tag(line, s_rxSubScript, 's_tag_sub')
-    line = s_make_tag(line, s_rxCode, 's_tag_code')
-    line = s_make_tag(line, s_rxEqIn, 's_tag_eqin')
-    line = s_make_tag(line, vimwiki#vars#get_syntaxlocal('rxTags'), 's_tag_tags', a:header_ids)
+    ##line = s_make_tag(line, s_rxItalic, 's_tag_em')
+    ##line = s_make_tag(line, s_rxBold, 's_tag_strong', header_ids)
+    ##line = s_make_tag(line, vimwiki#vars#get_wikilocal('rx_todo'), 's_tag_todo')
+    ##line = s_make_tag(line, s_rxDelText, 's_tag_strike')
+    ##line = s_make_tag(line, s_rxSuperScript, 's_tag_super')
+    ##line = s_make_tag(line, s_rxSubScript, 's_tag_sub')
+    ##line = s_make_tag(line, s_rxCode, 's_tag_code')
+    ##line = s_make_tag(line, s_rxEqIn, 's_tag_eqin')
+    ##line = s_make_tag(line, vimwiki#vars#get_syntaxlocal('rxTags'), 's_tag_tags', header_ids)
     return line
 
 
 def s_process_tags_links(line):
-    line = a:line
-    line = s_make_tag(line, vimwiki#vars#get_syntaxlocal('rxWikiLink'), 's_tag_wikilink')
-    line = s_make_tag(line, vimwiki#vars#get_global('rxWikiIncl'), 's_tag_wikiincl')
-    line = s_make_tag(line, vimwiki#vars#get_syntaxlocal('rxWeblink'), 's_tag_weblink')
+    line = line
+    #line = s_make_tag(line, vimwiki#vars#get_syntaxlocal('rxWikiLink'), 's_tag_wikilink')
+    #line = s_make_tag(line, vimwiki#vars#get_global('rxWikiIncl'), 's_tag_wikiincl')
+    #line = s_make_tag(line, vimwiki#vars#get_syntaxlocal('rxWeblink'), 's_tag_weblink')
     return line
 
 
 def s_process_inline_tags(line, header_ids):
-    line = s_process_tags_links(a:line)
-    line = s_process_tags_typefaces(line, a:header_ids)
+    line = s_process_tags_links(line)
+    line = s_process_tags_typefaces(line, header_ids)
     return line
 
 
 def s_close_tag_pre(pre, ldest):
-    if a:pre[0]
-        call insert(a:ldest, '</pre>')
+    if pre[0]:
+        insert(ldest, '</pre>')
         return 0
-    return a:pre
+    return pre
 
 
 def s_close_tag_math(math, ldest):
-    if a:math[0]
-        call insert(a:ldest, "\\\]")
+    if math[0]:
+        insert(ldest, "\\\]")
         return 0
-    return a:math
+    return math
 
 
 def s_close_tag_precode(quote, ldest):
-    if a:quote
-        call insert(a:ldest, '</pre></code>')
+    if quote:
+        insert(ldest, '</pre></code>')
         return 0
-    return a:quote
+    return quote
 
 def s_close_tag_arrow_quote(arrow_quote, ldest):
-    if a:arrow_quote
-        call insert(a:ldest, '</p></blockquote>')
+    if arrow_quote:
+        insert(ldest, '</p></blockquote>')
         return 0
-    return a:arrow_quote
+    return arrow_quote
 
 def s_close_tag_para(para, ldest):
-    if a:para
-        call insert(a:ldest, '</p>')
+    if para:
+        ldest.insert('</p>')
         return 0
-    return a:para
+    return para
 
 
 def s_close_tag_table(table, ldest, header_ids):
@@ -621,7 +621,7 @@ def s_close_tag_table(table, ldest, header_ids):
     # And CELLx is: { 'body': 'col_x', 'rowspan': r, 'colspan': c }
 
     def s_sum_rowspan(table):
-        table = a:table
+        table = table
 
         # Get max cells
         max_cells = 0
@@ -681,16 +681,16 @@ def s_close_tag_table(table, ldest, header_ids):
                 colspan_attr = ''
 
             ldest.append(f'<{tag_name}{rowspan_attr}{colspan_attr}>')
-            ldest.append(s_process_inline_tags(cell.body, a:header_ids))
+            ldest.append(s_process_inline_tags(cell.body, header_ids))
             ldest.append('</{tag_name}>')
 
-        call add(a:ldest, '</tr>')
+        add(ldest, '</tr>')
 
-    table = a:table
-    ldest = a:ldest
-    if len(table)
-        call s_sum_rowspan(table)
-        call s_sum_colspan(table)
+    table = table
+    ldest = ldest
+    if len(table):
+        s_sum_rowspan(table)
+        s_sum_colspan(table)
 
         if table[0] ==# 'center'
             call add(ldest, "<table class='center'>")
@@ -710,70 +710,69 @@ def s_close_tag_table(table, ldest, header_ids):
             call add(ldest, '<thead>')
             for row in table[1 : head-1]
                 if !empty(filter(row, '!empty(v:val)'))
-                    call s_close_tag_row(row, 1, ldest, a:header_ids)
+                    call s_close_tag_row(row, 1, ldest, header_ids)
             call add(ldest, '</thead>')
             call add(ldest, '<tbody>')
             for row in table[head+1 :]
-                call s_close_tag_row(row, 0, ldest, a:header_ids)
+                call s_close_tag_row(row, 0, ldest, header_ids)
             call add(ldest, '</tbody>')
         else
             for row in table[1 :]
-                call s_close_tag_row(row, 0, ldest, a:header_ids)
+                call s_close_tag_row(row, 0, ldest, header_ids)
         call add(ldest, '</table>')
         table = []
     return table
 
 
 def s_close_tag_list(lists, ldest):
-    while len(a:lists)
-        item = remove(a:lists, 0)
-        call insert(a:ldest, item[0])
+    while len(lists)
+        item = remove(lists, 0)
+        call insert(ldest, item[0])
 
 
 def s_close_tag_def_list(deflist, ldest):
-    if a:deflist
-        call insert(a:ldest, '</dl>')
+    if deflist:
+        insert(ldest, '</dl>')
         return 0
-    return a:deflist
+    return deflist
 
 
 def s_process_tag_pre(line, pre):
     # pre is the list of [is_in_pre, indent_of_pre]
     #XXX always outputs a single line or empty list!
     lines = []
-    pre = a:pre
     processed = 0
     #XXX huh?
-    #if !pre[0] && a:line =~# '^\s*{{{[^\(}}}\)]*\s*$'
-    if !pre[0] && a:line =~# '^\s*{{{'
-        class = matchstr(a:line, '{{{\zs.*$')
+    #if !pre[0] && line =~# '^\s*{{{[^\(}}}\)]*\s*$'
+    if !pre[0] && line =~# '^\s*{{{'
+        class = matchstr(line, '{{{\zs.*$')
         #FIXME class cannot contain arbitrary strings
         class = substitute(class, '\s\+$', '', 'g')
         if class !=? ''
             call add(lines, '<pre '.class.'>')
         else
             call add(lines, '<pre>')
-        pre = [1, len(matchstr(a:line, '^\s*\ze{{{'))]
+        pre = [1, len(matchstr(line, '^\s*\ze{{{'))]
         processed = 1
-    elseif pre[0] && a:line =~# '^\s*}}}\s*$'
+    elseif pre[0] && line =~# '^\s*}}}\s*$'
         pre = [0, 0]
         call add(lines, '</pre>')
         processed = 1
     elseif pre[0]
         processed = 1
         #XXX destroys indent in general!
-        #call add(lines, substitute(a:line, '^\s\{'.pre[1].'}', '', ''))
-        call add(lines, s_safe_html_preformatted(a:line))
+        #call add(lines, substitute(line, '^\s\{'.pre[1].'}', '', ''))
+        call add(lines, s_safe_html_preformatted(line))
     return [processed, lines, pre]
 
 
 def s_process_tag_math(line, math):
     # math is the list of [is_in_math, indent_of_math]
     lines = []
-    math = a:math
+    math = math
     processed = 0
-    if !math[0] && a:line =~# '^\s*{{\$[^\(}}$\)]*\s*$'
-        class = matchstr(a:line, '{{$\zs.*$')
+    if !math[0] && line =~# '^\s*{{\$[^\(}}$\)]*\s*$'
+        class = matchstr(line, '{{$\zs.*$')
         #FIXME class cannot be any string!
         class = substitute(class, '\s\+$', '', 'g')
         # store the environment name in a global variable in order to close the
@@ -785,9 +784,9 @@ def s_process_tag_math(line, math):
             call add(lines, "\\\[".class)
         else
             call add(lines, "\\\[")
-        math = [1, len(matchstr(a:line, '^\s*\ze{{\$'))]
+        math = [1, len(matchstr(line, '^\s*\ze{{\$'))]
         processed = 1
-    elseif math[0] && a:line =~# '^\s*}}\$\s*$'
+    elseif math[0] && line =~# '^\s*}}\$\s*$'
         math = [0, 0]
         if s_current_math_env !=? ''
             call add(lines, "\\end{".s_current_math_env.'}')
@@ -796,15 +795,15 @@ def s_process_tag_math(line, math):
         processed = 1
     elseif math[0]
         processed = 1
-        call add(lines, substitute(a:line, '^\s\{'.math[1].'}', '', ''))
+        call add(lines, substitute(line, '^\s\{'.math[1].'}', '', ''))
     return [processed, lines, math]
 
 
 def s_process_tag_precode(line, quote):
     # Process indented precode
     lines = []
-    line = a:line
-    quote = a:quote
+    line = line
+    quote = quote
     processed = 0
 
     # Check if start
@@ -826,9 +825,9 @@ def s_process_tag_precode(line, quote):
 
 def s_process_tag_arrow_quote(line, arrow_quote):
     lines = []
-    arrow_quote = a:arrow_quote
+    arrow_quote = arrow_quote
     processed = 0
-    line = a:line
+    line = line
 
     # Check if must increase level
     if line =~# '^' . repeat('\s*&gt;', arrow_quote + 1)
@@ -839,7 +838,7 @@ def s_process_tag_arrow_quote(line, arrow_quote):
             arrow_quote .= 1
 
         # Treat & Add line
-        stripped_line = substitute(a:line, '^\%(\s*&gt;\)\+', '', '')
+        stripped_line = substitute(line, '^\%(\s*&gt;\)\+', '', '')
         if stripped_line =~# '^\s*$'
             call add(lines, '</p>')
             call add(lines, '<p>')
@@ -858,7 +857,7 @@ def s_process_tag_arrow_quote(line, arrow_quote):
 def s_process_tag_list(line, lists, lstLeadingSpaces):
     def s_add_checkbox(line, rx_list):
         st_tag = '<li>'
-        chk = matchlist(a:line, a:rx_list)
+        chk = matchlist(line, rx_list)
         if !empty(chk) && len(chk[1]) > 0
             completion = index(vimwiki#vars#get_wikilocal('listsyms_list'), chk[1])
             n = len(vimwiki#vars#get_wikilocal('listsyms_list'))
@@ -872,14 +871,14 @@ def s_process_tag_list(line, lists, lstLeadingSpaces):
         return [st_tag, '']
 
 
-    in_list = (len(a:lists) > 0)
-    lstLeadingSpaces = a:lstLeadingSpaces
+    in_list = (len(lists) > 0)
+    lstLeadingSpaces = lstLeadingSpaces
 
     # If it is not list yet then do not process line that starts from *bold*
     # text.
     # XXX necessary? in *bold* text, no space must follow the first *
     if !in_list
-        pos = match(a:line, '^\s*' . s_rxBold)
+        pos = match(line, '^\s*' . s_rxBold)
         if pos != -1
             return [0, [], lstLeadingSpaces]
 
@@ -888,13 +887,13 @@ def s_process_tag_list(line, lists, lstLeadingSpaces):
     checkboxRegExp = '\s*\[\(.\)\]\s*'
     maybeCheckboxRegExp = '\%('.checkboxRegExp.'\)\?'
 
-    if a:line =~# '^\s*'.s_bullets.'\s'
-        lstSym = matchstr(a:line, s_bullets)
+    if line =~# '^\s*'.s_bullets.'\s'
+        lstSym = matchstr(line, s_bullets)
         lstTagOpen = '<ul>'
         lstTagClose = '</ul>'
         lstRegExp = '^\s*'.s_bullets.'\s'
-    elseif a:line =~# '^\s*'.s_numbers.'\s'
-        lstSym = matchstr(a:line, s_numbers)
+    elseif line =~# '^\s*'.s_numbers.'\s'
+        lstSym = matchstr(line, s_numbers)
         lstTagOpen = '<ol>'
         lstTagClose = '</ol>'
         lstRegExp = '^\s*'.s_numbers.'\s'
@@ -907,22 +906,22 @@ def s_process_tag_list(line, lists, lstLeadingSpaces):
     # If we're at the start of a list, figure out how many spaces indented we are so we can later
     # determine whether we're indented enough to be at the setart of a blockquote
     if lstSym !=# ''
-        lstLeadingSpaces = strlen(matchstr(a:line, lstRegExp.maybeCheckboxRegExp))
+        lstLeadingSpaces = strlen(matchstr(line, lstRegExp.maybeCheckboxRegExp))
 
     # Jump empty lines
-    if in_list && a:line =~# '^$'
+    if in_list && line =~# '^$'
         # Just Passing my way, do you mind ?
-        [processed, lines, quote] = s_process_tag_precode(a:line, g:state.quote)
+        [processed, lines, quote] = s_process_tag_precode(line, g:state.quote)
         processed = 1
         return [processed, lines, lstLeadingSpaces]
 
     # Can embedded indented code in list (Issue #55)
     b_permit = in_list
     blockquoteRegExp = '^\s\{' . (lstLeadingSpaces + 2) . ',}[^[:space:]>*-]'
-    b_match = lstSym ==# '' && a:line =~# blockquoteRegExp
+    b_match = lstSym ==# '' && line =~# blockquoteRegExp
     b_match = b_match || g:state.quote
     if b_permit && b_match
-        [processed, lines, g:state.quote] = s_process_tag_precode(a:line, g:state.quote)
+        [processed, lines, g:state.quote] = s_process_tag_precode(line, g:state.quote)
         if processed == 1
             return [processed, lines, lstLeadingSpaces]
 
@@ -930,52 +929,52 @@ def s_process_tag_list(line, lists, lstLeadingSpaces):
     if lstSym !=? ''
         # To get proper indent level 'retab' the line -- change all tabs
         # to spaces*tabstop
-        line = substitute(a:line, '\t', repeat(' ', &tabstop), 'g')
+        line = substitute(line, '\t', repeat(' ', &tabstop), 'g')
         indent = stridx(line, lstSym)
 
         [st_tag, en_tag] = s_add_checkbox(line, lstRegExp.checkboxRegExp)
 
         if !in_list
-            call add(a:lists, [lstTagClose, indent])
+            call add(lists, [lstTagClose, indent])
             call add(lines, lstTagOpen)
-        elseif (in_list && indent > a:lists[-1][1])
-            item = remove(a:lists, -1)
+        elseif (in_list && indent > lists[-1][1])
+            item = remove(lists, -1)
             call add(lines, item[0])
 
-            call add(a:lists, [lstTagClose, indent])
+            call add(lists, [lstTagClose, indent])
             call add(lines, lstTagOpen)
-        elseif (in_list && indent < a:lists[-1][1])
-            while len(a:lists) && indent < a:lists[-1][1]
-                item = remove(a:lists, -1)
+        elseif (in_list && indent < lists[-1][1])
+            while len(lists) && indent < lists[-1][1]
+                item = remove(lists, -1)
                 call add(lines, item[0])
         elseif in_list
-            item = remove(a:lists, -1)
+            item = remove(lists, -1)
             call add(lines, item[0])
 
-        call add(a:lists, [en_tag, indent])
+        call add(lists, [en_tag, indent])
         call add(lines, st_tag)
-        call add(lines, substitute(a:line, lstRegExp.maybeCheckboxRegExp, '', ''))
+        call add(lines, substitute(line, lstRegExp.maybeCheckboxRegExp, '', ''))
         processed = 1
 
-    elseif in_list && a:line =~# '^\s\+\S\+'
+    elseif in_list && line =~# '^\s\+\S\+'
         if vimwiki#vars#get_wikilocal('list_ignore_newline')
-            call add(lines, a:line)
+            call add(lines, line)
         else
-            call add(lines, '<br />'.a:line)
+            call add(lines, '<br />'.line)
         processed = 1
 
     # Close tag
     else
-        call s_close_tag_list(a:lists, lines)
+        call s_close_tag_list(lists, lines)
 
     return [processed, lines, lstLeadingSpaces]
 
 
 def s_process_tag_def_list(line, deflist):
     lines = []
-    deflist = a:deflist
+    deflist = deflist
     processed = 0
-    matches = matchlist(a:line, '\(^.*\)::\%(\s\|$\)\(.*\)')
+    matches = matchlist(line, '\(^.*\)::\%(\s\|$\)\(.*\)')
     if !deflist && len(matches) > 0
         call add(lines, '<dl>')
         deflist = 1
@@ -993,54 +992,54 @@ def s_process_tag_def_list(line, deflist):
 
 def s_process_tag_para(line, para):
     lines = []
-    para = a:para
+    para = para
     processed = 0
-    if a:line =~# '^\s\{,3}\S'
+    if line =~# '^\s\{,3}\S'
         if !para
             call add(lines, '<p>')
             para = 1
         processed = 1
         if vimwiki#vars#get_wikilocal('text_ignore_newline')
-            call add(lines, a:line)
+            call add(lines, line)
         else
-            call add(lines, a:line.'<br />')
-    elseif para && a:line =~# '^\s*$'
+            call add(lines, line.'<br />')
+    elseif para && line =~# '^\s*$'
         call add(lines, '</p>')
         para = 0
     return [processed, lines, para]
 
 
 def s_process_tag_h(line, id):
-    line = a:line
+    line = line
     processed = 0
     h_level = 0
     h_text = ''
     h_id = ''
 
-    if a:line =~# vimwiki#vars#get_syntaxlocal('rxHeader')
-        h_level = vimwiki#u#count_first_sym(a:line)
+    if line =~# vimwiki#vars#get_syntaxlocal('rxHeader')
+        h_level = vimwiki#u#count_first_sym(line)
     if h_level > 0
 
         h_text = vimwiki#u#trim(matchstr(line, vimwiki#vars#get_syntaxlocal('rxHeader')))
         h_number = ''
         h_complete_id = ''
         h_id = s_escape_html_attribute(h_text)
-        centered = (a:line =~# '^\s')
+        centered = (line =~# '^\s')
 
         if h_text !=# vimwiki#vars#get_wikilocal('toc_header')
 
-            a:id[h_level-1] = [h_text, a:id[h_level-1][1]+1]
+            id[h_level-1] = [h_text, id[h_level-1][1]+1]
 
             # reset higher level ids
             for level in range(h_level, 5)
-                a:id[level] = ['', 0]
+                id[level] = ['', 0]
 
             for l in range(h_level-1)
-                h_number .= a:id[l][1].'.'
-                if a:id[l][0] !=? ''
-                    h_complete_id .= a:id[l][0].'-'
-            h_number .= a:id[h_level-1][1]
-            h_complete_id .= a:id[h_level-1][0]
+                h_number .= id[l][1].'.'
+                if id[l][0] !=? ''
+                    h_complete_id .= id[l][0].'-'
+            h_number .= id[h_level-1][1]
+            h_complete_id .= id[h_level-1][0]
 
             if vimwiki#vars#get_global('html_header_numbering')
                 num = matchstr(h_number,
@@ -1065,7 +1064,7 @@ def s_process_tag_h(line, id):
         else
             h_part .= ' class="header">'
 
-        h_text = s_process_inline_tags(h_text, a:id)
+        h_text = s_process_inline_tags(h_text, id)
 
         line = h_part.a_tag.h_text.'</a></h'.h_level.'></div>'
 
@@ -1074,9 +1073,9 @@ def s_process_tag_h(line, id):
 
 
 def s_process_tag_hr(line):
-    line = a:line
+    line = line
     processed = 0
-    if a:line =~# '^-----*$'
+    if line =~# '^-----*$'
         line = '<hr />'
         processed = 1
     return [processed, line]
@@ -1086,28 +1085,28 @@ def s_process_tag_table(line, table, header_ids):
     def s_table_empty_cell(value):
         cell = {}
 
-        if a:value =~# '^\s*\\/\s*$'
+        if value =~# '^\s*\\/\s*$'
             cell.body        = ''
             cell.rowspan = 0
             cell.colspan = 1
-        elseif a:value =~# '^\s*&gt;\s*$'
+        elseif value =~# '^\s*&gt;\s*$'
             cell.body        = ''
             cell.rowspan = 1
             cell.colspan = 0
-        elseif a:value =~# '^\s*$'
+        elseif value =~# '^\s*$'
             cell.body        = '&nbsp;'
             cell.rowspan = 1
             cell.colspan = 1
         else
-            cell.body        = a:value
+            cell.body        = value
             cell.rowspan = 1
             cell.colspan = 1
 
         return cell
 
     def s_table_add_row(table, line):
-        if empty(a:table)
-            if a:line =~# '^\s\+'
+        if empty(table)
+            if line =~# '^\s\+'
                 row = ['center', []]
             else
                 row = ['normal', []]
@@ -1115,23 +1114,23 @@ def s_process_tag_table(line, table, header_ids):
             row = [[]]
         return row
 
-    table = a:table
+    table = table
     lines = []
     processed = 0
 
-    if vimwiki#tbl#is_separator(a:line)
-        call extend(table, s_table_add_row(a:table, a:line))
+    if vimwiki#tbl#is_separator(line)
+        call extend(table, s_table_add_row(table, line))
         processed = 1
-    elseif vimwiki#tbl#is_table(a:line)
-        call extend(table, s_table_add_row(a:table, a:line))
+    elseif vimwiki#tbl#is_table(line)
+        call extend(table, s_table_add_row(table, line))
 
         processed = 1
-        # cells = split(a:line, vimwiki#tbl#cell_splitter(), 1)[1: -2]
-        cells = vimwiki#tbl#get_cells(a:line)
+        # cells = split(line, vimwiki#tbl#cell_splitter(), 1)[1: -2]
+        cells = vimwiki#tbl#get_cells(line)
         call map(cells, 's_table_empty_cell(v:val)')
         call extend(table[-1], cells)
     else
-        table = s_close_tag_table(table, lines, a:header_ids)
+        table = s_close_tag_table(table, lines, header_ids)
     return [processed, lines, table]
 
 
@@ -1413,21 +1412,21 @@ def s_use_custom_wiki2html():
                 \ (s_file_exists(custom_wiki2html) || s_binary_exists(custom_wiki2html))
 
 def s_shellescape(str):
-    result = a:str
+    result = str
     #" This fix CustomWiki2HTML at root dir problem in Windows
     if result[len(result) - 1] ==# '\'
         result = result[:-2]
     return shellescape(result)
 
 def vimwiki#html#CustomWiki2HTML(root_path, path, wikifile, force):
-    call vimwiki#path#mkdir(a:path)
+    call vimwiki#path#mkdir(path)
     output = system(vimwiki#vars#get_wikilocal('custom_wiki2html'). ' '.
-            \ a:force. ' '.
+            \ force. ' '.
             \ vimwiki#vars#get_wikilocal('syntax'). ' '.
             \ strpart(vimwiki#vars#get_wikilocal('ext'), 1). ' '.
-            \ s_shellescape(a:path). ' '.
-            \ s_shellescape(a:wikifile). ' '.
-            \ s_shellescape(s_default_CSS_full_name(a:root_path)). ' '.
+            \ s_shellescape(path). ' '.
+            \ s_shellescape(wikifile). ' '.
+            \ s_shellescape(s_default_CSS_full_name(root_path)). ' '.
             \ (len(vimwiki#vars#get_wikilocal('template_path')) > 1 ?
             \           s_shellescape(expand(vimwiki#vars#get_wikilocal('template_path'))) : '-'). ' '.
             \ (len(vimwiki#vars#get_wikilocal('template_default')) > 0 ?
@@ -1552,14 +1551,14 @@ def s_convert_file_to_lines(wikifile, current_html_file):
     result['html'] = ldest
 
     result['template_name'] = template_name
-    result['title'] = s_process_title(placeholders, fnamemodify(a:wikifile, ':t:r'))
+    result['title'] = s_process_title(placeholders, fnamemodify(wikifile, ':t:r'))
     result['date'] = s_process_date(placeholders, strftime(vimwiki#vars#get_wikilocal('template_date_format')))
     result['wiki_path'] = strpart(s_current_wiki_file, strlen(vimwiki#vars#get_wikilocal('path')))
 
     return result
 
 def s_convert_file_to_lines_template(wikifile, current_html_file):
-    converted = s_convert_file_to_lines(a:wikifile, a:current_html_file)
+    converted = s_convert_file_to_lines(wikifile, current_html_file)
     if converted['nohtml'] == 1
         return []
     html_lines = s_get_html_template(converted['template_name'])
@@ -1590,9 +1589,9 @@ def s_convert_file_to_lines_template(wikifile, current_html_file):
 
 def s_convert_file(path_html, wikifile):
     done = 0
-    root_path_html = a:path_html
-    wikifile = fnamemodify(a:wikifile, ':p')
-    path_html = expand(a:path_html).vimwiki#vars#get_bufferlocal('subdir')
+    root_path_html = path_html
+    wikifile = fnamemodify(wikifile, ':p')
+    path_html = expand(path_html).vimwiki#vars#get_bufferlocal('subdir')
     htmlfile = fnamemodify(wikifile, ':t:r').'.html'
 
     if s_use_custom_wiki2html()
@@ -1639,9 +1638,9 @@ def s_convert_file(path_html, wikifile):
 
 
 def vimwiki#html#Wiki2HTML(path_html, wikifile):
-    result = s_convert_file(a:path_html, vimwiki#path#wikify_path(a:wikifile))
+    result = s_convert_file(path_html, vimwiki#path#wikify_path(wikifile))
     if result !=? ''
-        call s_create_default_CSS(a:path_html)
+        call s_create_default_CSS(path_html)
     return result
 
 
@@ -1659,7 +1658,7 @@ def vimwiki#html#WikiAll2HTML(path_html, force):
         # just ignore errors
     &eventignore = save_eventignore
 
-    path_html = expand(a:path_html)
+    path_html = expand(path_html)
     call vimwiki#path#mkdir(path_html)
 
     if !vimwiki#vars#get_wikilocal('html_filename_parameterization')
@@ -1684,7 +1683,7 @@ def vimwiki#html#WikiAll2HTML(path_html, force):
         call vimwiki#vars#set_bufferlocal('subdir', subdir)
         call vimwiki#vars#set_bufferlocal('invsubdir', vimwiki#base#invsubdir(subdir))
 
-        if a:force || !s_is_html_uptodate(wikifile)
+        if force || !s_is_html_uptodate(wikifile)
             call vimwiki#u#echo('Processing '.wikifile)
 
             call s_convert_file(path_html, wikifile)
@@ -1704,25 +1703,25 @@ def vimwiki#html#WikiAll2HTML(path_html, force):
 
 
 def s_file_exists(fname):
-    return !empty(getftype(expand(a:fname)))
+    return !empty(getftype(expand(fname)))
 
 
 def s_binary_exists(fname):
-    return executable(expand(a:fname))
+    return executable(expand(fname))
 
 
 def s_get_wikifile_url(wikifile):
     return vimwiki#vars#get_wikilocal('path_html') .
-        \ vimwiki#base#subdir(vimwiki#vars#get_wikilocal('path'), a:wikifile).
-        \ fnamemodify(a:wikifile, ':t:r').'.html'
+        \ vimwiki#base#subdir(vimwiki#vars#get_wikilocal('path'), wikifile).
+        \ fnamemodify(wikifile, ':t:r').'.html'
 
 
 def vimwiki#html#PasteUrl(wikifile):
-    execute 'r !echo file://'.s_get_wikifile_url(a:wikifile)
+    execute 'r !echo file://'.s_get_wikifile_url(wikifile)
 
 
 def vimwiki#html#CatUrl(wikifile):
-    execute '!echo file://'.s_get_wikifile_url(a:wikifile)
+    execute '!echo file://'.s_get_wikifile_url(wikifile)
 
 
 def s_rss_header():
@@ -1752,8 +1751,8 @@ def s_rss_footer():
 def s_rss_item(path, title):
     diary_rel_path = vimwiki#vars#get_wikilocal('diary_rel_path')
     full_path = vimwiki#vars#get_wikilocal('path')
-                \ . diary_rel_path . a:path . vimwiki#vars#get_wikilocal('ext')
-    fname_base = fnamemodify(a:path, ':t:r')
+                \ . diary_rel_path . path . vimwiki#vars#get_wikilocal('ext')
+    fname_base = fnamemodify(path, ':t:r')
     htmlfile = fname_base . '.html'
 
     converted = s_convert_file_to_lines(full_path, htmlfile)
@@ -1766,7 +1765,7 @@ def s_rss_item(path, title):
     pubdate = strftime('%a, %d %b %Y %T %z', getftime(full_path))
 
     item_pre = [' <item>',
-                \ '  <title>' . a:title . '</title>',
+                \ '  <title>' . title . '</title>',
                 \ '  <link>' . link . '</link>',
                 \ '  <guid isPermaLink="false">' . fname_base . '</guid>',
                 \ '  <description><![CDATA[']
@@ -1777,7 +1776,7 @@ def s_rss_item(path, title):
     return item_pre + converted['html'] + item_post
 
 def s_generate_rss(path):
-    rss_path = a:path . vimwiki#vars#get_wikilocal('rss_name')
+    rss_path = path . vimwiki#vars#get_wikilocal('rss_name')
     max_items = vimwiki#vars#get_wikilocal('rss_max_items')
 
     rss_lines = []
