@@ -5,7 +5,8 @@ This is translation from vimwiki html export file to python
 import os
 import re
 
-# XXX: change to real paths from commandline args
+
+# XXX: remove this
 ROOT = os.path.expanduser("~/vimwiki")
 OUTPUT_DIR = os.path.expanduser("~/vimwiki_html")
 
@@ -45,6 +46,7 @@ s_rxSubScript = ',,[^,`]\+,,'
 re_safe_html = re.compile(r'<(\s*/*[^b,i,s,u,sub,sup,kbd,br,hr]*?)>')
 
 def s_root_path(subdir):
+    # XXX: not used here - this have nothing to do with the conversion
     return os.path.relpath(ROOT, os.path.join(ROOT, subdir))
 
 
@@ -89,12 +91,12 @@ def s_is_img_link(lnk):
 
 
 def s_find_autoload_file(name):
+    # XXX: not used here - this have nothing to do with the conversion
     return os.path.join(ROOT, name)
 
 
 def s_default_CSS_full_name(path):
-    # XXX: get the path for css file out of config. this must be aligned with
-    # ROOT - so right css file for right wiki.
+    # XXX: not used here - this have nothing to do with the conversion
     return os.path.join(ROOT, 'style.css')
 
 
@@ -134,7 +136,7 @@ def s_template_full_name(name):
 
 
 def s_get_html_template(template):
-    # TODO: refactor it!!!
+    # XXX: not used here - this have nothing to do with the conversion
     lines=[]
 
     template_name = os.path.join(ROOT, 'default.tpl')
@@ -166,6 +168,7 @@ def s_safe_html_line(line):
 
 
 def s_delete_html_files(path):
+    # XXX: not used here - this have nothing to do with the conversion
     wiki_fnames = []
     for root, dirs, files in os.walk(ROOT):
         for fname in files:
@@ -227,6 +230,7 @@ def s_process_title(placeholders, default_title):
 
 
 def s_is_html_uptodate(wikifile):
+    # XXX: not used here - this have nothing to do with the conversion
     tpl_time = -1
 
     tpl_file = s_template_full_name('')
