@@ -1,5 +1,11 @@
 import argparse
 import sys
+def _validate_file_or_dir(path):
+    return path
+
+
+def _validate_output(path):
+    return path
 
 
 def parse_args():
