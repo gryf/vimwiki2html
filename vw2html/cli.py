@@ -1,10 +1,37 @@
 import argparse
+import os
 import sys
+import shutil
+import warnings
+
+import vw2html
 def _validate_file_or_dir(path):
+    if not os.path.exists(path):
+        raise argparse.ArgumentTypeError(f"Provided '{path}' doesn't exists.")
     return path
 
 
 def _validate_output(path):
+    if os.path.exists(path):
+        if not os.path.isdir(path):
+            msg = f"Path '{path}' and it's not a directory"
+            raise argparse.ArgumentTypeError(msg)
+        warnings.warn(f'Path "{path} exists. Content might be removed and/or '
+                      f'overwritten.')
+        try:
+            test_fn = os.path.join(path, 'test.txt')
+            with open(test_fn, 'w') as fobj:
+                fobj.write('test')
+            os.unlink(test_fn)
+        except (PermissionError, OSError) as exc:
+            msg = f"Cannot access '{path}': {exc.strerror}."
+            raise argparse.ArgumentTypeError(msg)
+    else:
+        try:
+            os.makedirs(path)
+        except (PermissionError, OSError) as exc:
+            msg = f"Cannot create '{path}': {exc.strerror}."
+            raise argparse.ArgumentTypeError(msg)
     return path
 
 
