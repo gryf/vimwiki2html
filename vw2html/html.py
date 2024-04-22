@@ -20,10 +20,6 @@ class Generic:
 
 glob = Generic()
 
-# FIXME: Magics: Why not use the current syntax highlight
-# This is due to historical copy paste and laziness of markdown user
-# text: *strong*
-# default_syntax.rxBold = '\*[^*]\+\*'
 s_rxBold = (r'\%(^\|\s\|[[:punct:]]\)\@<=\*\%([^*`[:space:]][^*`]*[^*`'
             r'[:space:]]\|[^*`[:space:]]\)\*\%([[:punct:]]\|\s\|$\)\@=')
 
@@ -732,31 +728,26 @@ def s_close_tag_def_list(deflist, ldest):
 
 
 def s_process_tag_pre(line, pre):
-    # pre is the list of [is_in_pre, indent_of_pre]
-    #XXX always outputs a single line or empty list!
     lines = []
     processed = 0
-    #XXX huh?
-    #if !pre[0] && line =~# '^\s*{{{[^\(}}}\)]*\s*$'
-    if !pre[0] && line =~# '^\s*{{{'
-        class = matchstr(line, '{{{\zs.*$')
-        #FIXME class cannot contain arbitrary strings
-        class = substitute(class, '\s\+$', '', 'g')
-        if class !=? ''
-            call add(lines, '<pre '.class.'>')
-        else
-            call add(lines, '<pre>')
-        pre = [1, len(matchstr(line, '^\s*\ze{{{'))]
+    open_match = re.match(r'^(\s*){{{([^\(}}}\)]*)\s*$', line)
+    closed_match = re.match(r'^\s*}}}\s*$', line)
+    if not pre[0] and open_match:
+        block_type = open_match.group()[1].strip()
+        indent = len(open_match.group()[0])
+        if block_type:
+            lines.append(f'<pre {block_type}>')
+        else:
+            lines.append('<pre>')
+        pre = [1, indent]
         processed = 1
-    elseif pre[0] && line =~# '^\s*}}}\s*$'
+    elif pre[0] and closed_match:
         pre = [0, 0]
-        call add(lines, '</pre>')
+        lines.append('</pre>')
         processed = 1
-    elseif pre[0]
+    elif pre[0]:
         processed = 1
-        #XXX destroys indent in general!
-        #call add(lines, substitute(line, '^\s\{'.pre[1].'}', '', ''))
-        call add(lines, s_safe_html_preformatted(line))
+        lines.append(safe_html_preformatted(line))
     return [processed, lines, pre]
 
 
@@ -1145,45 +1136,14 @@ def parse_line(line, state):
     res_lines = []
     processed = 0
 
-    # Handle multiline comments, keeping in mind that they can mutate the
-    # current line while not marking as processed in the scenario where some
-    # text remains that needs to go through additional processing
-    if !processed
-        mc_format = vimwiki#vars#get_syntaxlocal('multiline_comment_format')
-        mc_start = mc_format.pre_mark
-        mc_end = mc_format.post_mark
-
-        # If either start or end is empty, we want to skip multiline handling
-        if !empty(mc_start) && !empty(mc_end)
-            # If we have an active multiline comment, we prepend the start of the
-            # multiline to our current line to make searching easier, knowing that
-            # it will be removed using substitute in all scenarios
-            if state.active_multiline_comment
-                line = mc_start.line
-
-            # Remove all instances of multiline comment pairs (start + end), using
-            # a lazy match so that we stop at the first ending multiline comment
-            # rather than potentially absorbing multiple
-            line = substitute(line, mc_start.'.\{-\}'.mc_end, '', 'g')
-
-            # Check for a dangling multiline comment (comprised only of start) and
-            # remove all characters beyond it, also indicating that we are dangling
-            mc_start_pos = match(line, mc_start)
-            if mc_start_pos >= 0
-                # NOTE: mc_start_pos is the byte offset, so should be fine with strpart
-                line = strpart(line, 0, mc_start_pos)
-
-            # If we had a dangling multiline comment, we want to flag as such
-            state.active_multiline_comment = mc_start_pos >= 0
-
-    if !processed
+    if not processed:
         # allows insertion of plain text to the final html conversion
         # for example:
         # %plainhtml <div class="mycustomdiv">
         # inserts the line above to the final html file (without %plainhtml
         # prefix)
         trigger = '%plainhtml'
-        if line =~# '^\s*' . trigger
+        if trigger in line:
             lines = []
             processed = 1
 
@@ -1192,22 +1152,24 @@ def parse_line(line, state):
             # before inserting plain text. this ensures that
             # the plain text is not considered as
             # part of the preceding structure
-            if processed && len(state.table)
-                state.table = s_close_tag_table(state.table, lines, state.header_ids)
-            if processed && state.deflist
+            if processed and len(state.table):
+                state.table = s_close_tag_table(state.table, lines,
+                                                state.header_ids)
+            if processed and state.deflist:
                 state.deflist = s_close_tag_def_list(state.deflist, lines)
-            if processed && state.quote
+            if processed and state.quote:
                 state.quote = s_close_tag_precode(state.quote, lines)
-            if processed && state.arrow_quote
-                state.arrow_quote = s_close_tag_arrow_quote(state.arrow_quote, lines)
-            if processed && state.para
+            if processed and state.arrow_quote:
+                state.arrow_quote = s_close_tag_arrow_quote(state.arrow_quote,
+                                                            lines)
+            if processed and state.para:
                 state.para = s_close_tag_para(state.para, lines)
 
             # remove the trigger prefix
-            pp = split(line, trigger)[0]
+            pp = line.split(trigger)[0]
 
-            call add(lines, pp)
-            call extend(res_lines, lines)
+            lines.append(pp)
+            res_lines.extend(lines)
 
     line = s_safe_html_line(line)
 
@@ -1401,11 +1363,6 @@ def parse_line(line, state):
     return [res_lines, state]
 
 
-def s_use_custom_wiki2html():
-    custom_wiki2html = vimwiki#vars#get_wikilocal('custom_wiki2html')
-    return !empty(custom_wiki2html) &&
-                \ (s_file_exists(custom_wiki2html) || s_binary_exists(custom_wiki2html))
-
 def s_shellescape(str):
     result = str
     #" This fix CustomWiki2HTML at root dir problem in Windows
@@ -1439,13 +1396,7 @@ def s_shellescape(str):
 def s_convert_file_to_lines(wiki_contents):
     result = {}
 
-    # the currently processed file name is needed when processing links
-    # yeah yeah, shame on me for using (quasi-) global variables
-    s_current_wiki_file = wikifile
-    s_current_html_file = current_html_file
-
-    with open(wikifile) as f:
-        lsource = f.read().split('\n')
+    lsource = wiki_contents.split('\n')
 
     ldest = []
 
@@ -1463,7 +1414,6 @@ def s_convert_file_to_lines(wiki_contents):
     state.para = 0
     state.quote = 0
     state.arrow_quote = 0
-    state.active_multiline_comment = 0
     state.list_leading_spaces = 0
     state.pre = [0, 0]  # [in_pre, indent_pre]
     state.math = [0, 0]  # [in_math, indent_math]
@@ -1546,92 +1496,41 @@ def s_convert_file_to_lines(wiki_contents):
     result['html'] = ldest
 
     result['template_name'] = template_name
-    result['title'] = s_process_title(placeholders, fnamemodify(wikifile, ':t:r'))
-    result['date'] = s_process_date(placeholders, strftime(vimwiki#vars#get_wikilocal('template_date_format')))
-    result['wiki_path'] = strpart(s_current_wiki_file, strlen(vimwiki#vars#get_wikilocal('path')))
 
     return result
 
-def s_convert_file_to_lines_template(wikifile, current_html_file):
-    converted = s_convert_file_to_lines(wikifile, current_html_file)
-    if converted['nohtml'] == 1
-        return []
-    html_lines = s_get_html_template(converted['template_name'])
 
-    # processing template variables (refactor to a function)
-    call map(html_lines, 'substitute(v:val, "%title%", converted["title"], "g")')
-    call map(html_lines, 'substitute(v:val, "%date%", converted["date"], "g")')
-    call map(html_lines, 'substitute(v:val, "%root_path%", "'.
-                \ s_root_path(vimwiki#vars#get_bufferlocal('subdir')) .'", "g")')
-    call map(html_lines, 'substitute(v:val, "%wiki_path%", converted["wiki_path"], "g")')
+def remove_multiline_comments(contents):
+    """
+    Remove comments enclosed %%+ and +%% markings including markins as well.
+    """
+    re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
+    return re_ml_comment.sub('', contents)
 
-    css_name = expand(vimwiki#vars#get_wikilocal('css_name'))
-    css_name = substitute(css_name, '\', '/', 'g')
-    call map(html_lines, 'substitute(v:val, "%css%", css_name, "g")')
 
-    enc = &fileencoding
-    if enc ==? ''
-        enc = &encoding
-    call map(html_lines, 'substitute(v:val, "%encoding%", enc, "g")')
+def s_convert_file(wikifile):
 
-    html_lines = s_html_insert_contents(html_lines, converted['html']) " %contents%
+    with open(wikifile) as fobj:
+        wiki_contents = fobj.read()
 
-    return html_lines
+    if '%nohtml' in wiki_contents:
+        print('nohtml detected, skipping conversion')
+        return {}
 
-def s_convert_file(path_html, wikifile):
-    done = 0
-    root_path_html = path_html
-    wikifile = fnamemodify(wikifile, ':p')
-    path_html = expand(path_html).vimwiki#vars#get_bufferlocal('subdir')
-    htmlfile = fnamemodify(wikifile, ':t:r').'.html'
+    remove_multiline_comments(wiki_contents)
 
-    if s_use_custom_wiki2html()
-        force = 1
-        call vimwiki#html#CustomWiki2HTML(root_path_html, path_html, wikifile, force)
-        done = 1
-        if vimwiki#vars#get_wikilocal('html_filename_parameterization')
-            return path_html . s_parameterized_wikiname(htmlfile)
-        else
-            return path_html.htmlfile
+    html_struct = s_convert_file_to_lines(wiki_contents)
+    if not html_struct['html']:
+        print(f'no content found for {wikifile}')
+        return html_struct
 
-    if s_syntax_supported() && done == 0
-        html_lines = s_convert_file_to_lines_template(wikifile, path_html . htmlfile)
-        if html_lines == []
-            return ''
-        call vimwiki#path#mkdir(path_html)
-
-        if g:vimwiki_global_vars['listing_hl'] > 0 && has('unix')
-            i = 0
-            while i < len(html_lines)
-                if html_lines[i] =~# '^<pre .*type=.\+>'
-                    type = split(split(split(html_lines[i], 'type=')[1], '>')[0], '\s\+')[0]
-                    attr = split(split(html_lines[i], '<pre ')[0], '>')[0]
-                    start = i + 1
-                    cur = start
-
-                    while html_lines[cur] !~# '^<\/pre>'
-                        cur += 1
-
-                    tmp = ('tmp'. split(system('mktemp -p . --suffix=.' . type, 'silent'), 'tmp')[-1])[:-2]
-                    call system('echo ' . shellescape(join(html_lines[start : cur - 1], "\n")) . ' > ' . tmp)
-                    call system(g:vimwiki_global_vars['listing_hl_command'] . ' ' . tmp  . ' > ' . tmp . '.html')
-                    html_out = system('cat ' . tmp . '.html')
-                    call system('rm ' . tmp . ' ' . tmp . '.html')
-                    i = cur
-                    html_lines = html_lines[0 : start - 1] + split(html_out, "\n") + html_lines[cur : ]
-                i += 1
-
-        call writefile(html_lines, path_html.htmlfile)
-        return path_html . htmlfile
-
-    call vimwiki#u#error('Conversion to HTML is not supported for this syntax')
-    return ''
+    return html_struct
 
 
 def vimwiki2html(path_html, wikifile):
     #result = s_convert_file(path_html, vimwiki#path#wikify_path(wikifile))
-    if result !=? ''
-        call s_create_default_CSS(path_html)
+    if result:
+        s_create_default_CSS(path_html)
     return result
 
 
