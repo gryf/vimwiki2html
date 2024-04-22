@@ -45,6 +45,8 @@ s_rxSuperScript = '\^[^^`]\+\^'
 # text: ,,subscript,,
 s_rxSubScript = ',,[^,`]\+,,'
 
+# match all the tags in the wiki and replace them, besides defined, simple ones
+re_safe_html = re.compile(r'<(\s*/*[^b,i,s,u,sub,sup,kbd,br,hr]*?)>')
 
 def s_root_path(subdir):
     return os.path.relpath(ROOT, os.path.join(ROOT, subdir))
@@ -158,12 +160,12 @@ def s_escape_html_attribute(string):
 
 
 def s_safe_html_line(line):
-    # escape & < > when producing HTML text
-    # s:lt_pattern, s:gt_pattern depend on g:vimwiki_valid_html_tags
-    # and are set in vimwiki#html#Wiki2HTML()
+    """
+    escape & < > when producing HTML text using g:vimwiki_valid_html_tags for
+    exepctions
+    """
+    line = re_safe_html.sub('&lt;\\1&gt;', line)
     line = line.replace('&', '\&amp;')
-    line = re.sub(s.lt_pattern, '\&lt;', line)
-    line = re.sub(s.gt_pattern, '\&gt;', line)
     return line
 
 
