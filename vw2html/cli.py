@@ -5,6 +5,56 @@ import shutil
 import warnings
 
 import vw2html
+
+
+class VimWiki2HTMLConverter:
+    def __init__(self, args):
+        # Template to put contents in. If not provided by the commandline,
+        # this is the default
+        # template fields:
+        # %title% - to be replaced by filename by default, if exists on the
+        #           page, will be placed instead
+        # %date% - unused
+        # %root_path% - root path of the generated content - / by default
+        # %wiki_path% - unused
+        # %content% - where generated content goes
+        self._template = ("<html><head><title>VimWiki</title></head>"
+                          "<body>%content%</body></html>")
+        # root path for the root of the wiki, potentially used in templates,
+        # and is set if provided source is a directory
+        # XXX: do I need this?
+        self._root_path = ''
+        # CSS file to be copied/added to the output direcotry. Should be
+        # coherent with the template
+        self._css_fname = None
+        # Source direcotry, aka wiki direcotry, where all wiki/media files are
+        # located.
+        self._wiki_path = None
+        # Source file. It may happen, that user want to convert only single
+        # file - this is where it is stored internally.
+        self._wiki_filepath = None
+        # Output direcotry for the html/css/content files
+        self._www_path = None
+
+        self.configure()
+
+    def configure(self):
+        args = parse_args()
+        if os.path.isdir(args.source):
+            self._wiki_path = os.path.abspath(args.source)
+        else:
+            self._wiki_filepath = os.path.abspath(args.source)
+
+        self._www_path = args.output
+
+        if args.template:
+            with open(args.template) as fobj:
+                self._template = fobj.read()
+
+        if args.css:
+            self._css_fname = args.css
+
+
 def _validate_file_or_dir(path):
     if not os.path.exists(path):
         raise argparse.ArgumentTypeError(f"Provided '{path}' doesn't exists.")
@@ -55,6 +105,7 @@ def parse_args():
 
 def main():
     args = parse_args()
+    converter = VimWiki2HTMLConverter(args)
     return 0
 
 
