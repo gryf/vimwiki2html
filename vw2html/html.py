@@ -18,8 +18,7 @@ class Generic:
     """
     pass
 
-s = Generic()
-g = Generic()
+glob = Generic()
 
 # FIXME: Magics: Why not use the current syntax highlight
 # This is due to historical copy paste and laziness of markdown user
