@@ -1310,12 +1310,6 @@ def parse_line(line, state):
     ##    if line =~# vimwiki#vars#get_syntaxlocal('comment_regex')
     ##        processed = 1
 
-    # nohtml -- placeholder
-    if not processed:
-        if line.startswith('%nohtml'):
-            processed = 1
-            state.placeholder = ['nohtml']
-
     # title -- placeholder
     if not processed:
         if line.startswith('%title '):
@@ -1513,9 +1507,6 @@ def s_convert_file_to_lines(wiki_contents):
 
     ldest = []
 
-    # nohtml placeholder -- to skip html generation.
-    nohtml = 0
-
     # template placeholder
     template_name = ''
 
@@ -1573,10 +1564,7 @@ def s_convert_file_to_lines(wiki_contents):
             s_remove_blank_lines(ldest)
 
         if state.placeholder:
-            if state.placeholder[0].lower() == 'nohtml':
-                nohtml = 1
-                break
-            elif state.placeholder[0].lower() == 'template':
+            if state.placeholder[0].lower() == 'template':
                 template_name = state.placeholder[1]
             else:
                 placeholders.append([state.placeholder, len(ldest),
@@ -1584,12 +1572,6 @@ def s_convert_file_to_lines(wiki_contents):
             state.placeholder = []
 
         ldest.extend(lines)
-
-    result['nohtml'] = nohtml
-
-    if nohtml:
-        print('nohtml placeholder found')
-        return result
 
     s_remove_blank_lines(ldest)
 
@@ -1622,22 +1604,9 @@ def remove_multiline_comments(contents):
 
 
 def s_convert_file(wikifile):
-
-    with open(wikifile) as fobj:
-        wiki_contents = fobj.read()
-
-    if '%nohtml' in wiki_contents:
-        print('nohtml detected, skipping conversion')
-        return {}
-
-    remove_multiline_comments(wiki_contents)
-
-    html_struct = s_convert_file_to_lines(wiki_contents)
-    if not html_struct['html']:
-        print(f'no content found for {wikifile}')
-        return html_struct
-
-    return html_struct
+    html = Html(wikifile, output_dir)
+    html.convert()
+    return html
 
 
 def vimwiki2html(path_html, wikifile):
