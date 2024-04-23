@@ -36,10 +36,9 @@ class VimWiki2HTMLConverter:
         # Output direcotry for the html/css/content files
         self._www_path = None
 
-        self.configure()
+        self.configure(args)
 
-    def configure(self):
-        args = parse_args()
+    def configure(self, args):
         if os.path.isdir(args.source):
             self._wiki_path = os.path.abspath(args.source)
         else:
