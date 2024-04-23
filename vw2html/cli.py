@@ -53,6 +53,22 @@ class VimWiki2HTMLConverter:
         if args.css:
             self._css_fname = args.css
 
+    def _applay_data_to_template(self, html_obj):
+        root_path = '../'.join(['' for _ in range(html_obj.level)])
+        template = self._template
+        if html_obj.template:
+            try:
+                with open(html_obj.template) as fobj:
+                    template = fobj.read()
+            except IOError:
+                print(f'Error loading template {html_obj.template}')
+
+        html = template.replace('%content%', html_obj.html)
+        html = html.replace('%root_path%', root_path)
+        html = html.replace('%title%', html_obj.title)
+        html = html.replace('%date%', html_obj.date)
+        return html
+
     def convert(self):
         # copy css file
         if self._css_fname:
@@ -64,19 +80,18 @@ class VimWiki2HTMLConverter:
                             os.path.join(self._www_path, self._css_fname))
 
         if self._wiki_filepath:
-            fname = os.path.splitext(os.path.basename(self._wiki_filepath))[0]
-            fname = os.path.join(self._www_path, fname + '.html')
-            data = {fname: vw2html.html.s_convert_file(self._wiki_filepath)}
-
+            data = [vw2html.html.s_convert_file(self._wiki_filepath,
+                                                self._www_path)]
         else:
+            data = []
             for root, dirs, files in os.walk(self._wiki_path):
                 for fname in files:
-                    vw2html.html.s_convert_file(os.path.join(root, fname))
+                    data.append(vw2html.html.
+                                s_convert_file(os.path.join(root, fname)))
 
-        for fname in data:
-            with open(fname, 'w') as fobj:
-                html = '\n'.join(data[fname]['html'])
-                fobj.write(self._template.replace('%content%', html))
+        for obj in data:
+            with open(obj.html_fname, 'w') as fobj:
+                fobj.write(self._applay_data_to_template(obj))
         return 0
 
 
