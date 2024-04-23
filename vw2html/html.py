@@ -27,6 +27,7 @@ class Html:
     re_ph_title = re.compile(r'\n?%title\s?(.*)\n')
     re_ph_template = re.compile(r'\n?%template\s?(.*)\n')
     re_ph_date = re.compile(r'\n?%date\s?(.*)\n')
+    re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
 
     def __init__(self, wikifname, output_dir):
         self.level = 1
@@ -50,6 +51,9 @@ class Html:
             print(f'no content found for {self.wikifile}')
             return
 
+        # do global substitution and removal - remove multiline comments and
+        # placeholders
+        self.remove_multiline_comments()
         self.find_title()
         self.find_template()
         self.find_date()
@@ -57,11 +61,24 @@ class Html:
         html_struct = s_convert_file_to_lines(self.wiki_contents)
         self.html = '\n'.join(html_struct['html'])
 
+    def media(self):
+        """
+        Placeholder for attached media (inline images, link to local images
+        and files).
+        """
+
     @property
     def title(self):
         if not self._title:
             return os.path.basename(os.path.splitext(self.wiki_fname)[0])
         return self._title
+
+    def remove_multiline_comments(self):
+        """
+        Remove comments enclosed %%+ and +%% markings including markins as
+        well.
+        """
+        self.wiki_contents = self.re_ml_comment.sub('', self.wiki_contents)
 
     def find_title(self):
         """
