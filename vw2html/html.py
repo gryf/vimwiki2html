@@ -1,6 +1,7 @@
 """
 This is translation from vimwiki html export file to python
 """
+import datetime
 import os
 import re
 
