@@ -25,6 +25,7 @@ class Html:
     Simple container for the converted file
     """
     re_ph_nohtml = re.compile(r'\n?%nohtml\s*\n')
+    re_ph_title = re.compile(r'\n?%title\s?(.*)\n')
 
     def __init__(self, wikifname, output_dir):
         self.level = 1
@@ -48,8 +49,28 @@ class Html:
             print(f'no content found for {self.wikifile}')
             return
 
+        self.find_title()
+
         html_struct = s_convert_file_to_lines(self.wiki_contents)
         self.html = '\n'.join(html_struct['html'])
+
+    @property
+    def title(self):
+        if not self._title:
+            return os.path.basename(os.path.splitext(self.wiki_fname)[0])
+        return self._title
+
+    def find_title(self):
+        """
+        Search for %title placeholder. If found set title and remove the line
+        from source wiki.
+        """
+        result = self.re_ph_title.search(self.wiki_contents)
+
+        if not result:
+            return
+        self._title = result.groups()[0].strip()
+        self.wiki_contents = self.re_ph_title.sub('\n', self.wiki_contents)
 
 glob = Generic()
 
