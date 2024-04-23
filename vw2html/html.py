@@ -19,6 +19,38 @@ class Generic:
     """
     pass
 
+
+class Html:
+    """
+    Simple container for the converted file
+    """
+    re_ph_nohtml = re.compile(r'\n?%nohtml\s*\n')
+
+    def __init__(self, wikifname, output_dir):
+        self.level = 1
+        self.template = None
+        self.date = None
+        with open(wikifname) as fobj:
+            self.wiki_contents = fobj.read()
+        self.nohtml = bool(self.re_ph_nohtml.search(self.wiki_contents))
+        self.html = ''
+        self.wiki_fname = wikifname
+        self.output_dir = output_dir
+        self.html_fname = os.path.join(output_dir, os.path
+                                       .splitext(os.path
+                                                 .basename(wikifname))[0] +
+                                       '.html')
+        self._title = None
+
+    def convert(self):
+        # exit early if there is %nohtml placeholder
+        if self.nohtml:
+            print(f'no content found for {self.wikifile}')
+            return
+
+        html_struct = s_convert_file_to_lines(self.wiki_contents)
+        self.html = '\n'.join(html_struct['html'])
+
 glob = Generic()
 
 s_rxBold = (r'\%(^\|\s\|[[:punct:]]\)\@<=\*\%([^*`[:space:]][^*`]*[^*`'
