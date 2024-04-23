@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 This is translation from vimwiki html export file to python
 """
@@ -26,6 +25,7 @@ class Html:
     """
     re_ph_nohtml = re.compile(r'\n?%nohtml\s*\n')
     re_ph_title = re.compile(r'\n?%title\s?(.*)\n')
+    re_ph_template = re.compile(r'\n?%template\s?(.*)\n')
 
     def __init__(self, wikifname, output_dir):
         self.level = 1
@@ -50,6 +50,7 @@ class Html:
             return
 
         self.find_title()
+        self.find_template()
 
         html_struct = s_convert_file_to_lines(self.wiki_contents)
         self.html = '\n'.join(html_struct['html'])
@@ -71,6 +72,22 @@ class Html:
             return
         self._title = result.groups()[0].strip()
         self.wiki_contents = self.re_ph_title.sub('\n', self.wiki_contents)
+
+    def find_template(self):
+        """
+        Search for %template placeholder. If found set it and remove the
+        line from source wiki.
+        """
+        result = self.re_ph_template.search(self.wiki_contents)
+
+        if not result:
+            return
+        # TODO: check if vimwiki supports full/relative paths and/or ~ or
+        # $HOME.
+        path = result.groups()[0].strip()
+        self.template = os.path.expandvars(os.path.expanduser(path))
+        self.wiki_contents = self.re_ph_template.sub('\n', self.wiki_contents)
+
 
 glob = Generic()
 
