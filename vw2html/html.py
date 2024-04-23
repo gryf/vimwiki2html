@@ -25,9 +25,9 @@ class Html:
     Simple container for the converted file
     """
     re_ph_nohtml = re.compile(r'\n?%nohtml\s*\n')
-    re_ph_title = re.compile(r'\n?%title\s?(.*)\n')
-    re_ph_template = re.compile(r'\n?%template\s?(.*)\n')
-    re_ph_date = re.compile(r'\n?%date\s?(.*)\n')
+    re_ph_title = re.compile(r'\n?%title\s(.*)\n')
+    re_ph_template = re.compile(r'\n?%template\s(.*)\n')
+    re_ph_date = re.compile(r'\n?\s*%date\s(.*)\n')
     re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
 
     def __init__(self, wikifname, output_dir):
@@ -119,7 +119,7 @@ class Html:
             return
 
         self.date = result.groups()[0].strip()
-        self.wiki_contents = self.re_ph_template.sub('\n', self.wiki_contents)
+        self.wiki_contents = self.re_ph_date.sub('\n', self.wiki_contents)
 
         if not self.date:
             # TODO: support different date formats - another commandline
