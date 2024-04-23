@@ -85,13 +85,16 @@ class VimWiki2HTMLConverter:
 
         if self._wiki_filepath:
             data = [vw2html.html.s_convert_file(self._wiki_filepath,
-                                                self._www_path)]
+                                                self._www_path,
+                                                self._root_path)]
         else:
             data = []
             for root, dirs, files in os.walk(self._wiki_path):
                 for fname in files:
                     data.append(vw2html.html.
-                                s_convert_file(os.path.join(root, fname)))
+                                s_convert_file(os.path.join(root, fname),
+                                               self._www_path,
+                                               self._root_path))
 
         for obj in data:
             with open(obj.html_fname, 'w') as fobj:

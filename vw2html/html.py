@@ -30,8 +30,11 @@ class Html:
     re_ph_date = re.compile(r'\n?\s*%date\s(.*)\n')
     re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
 
-    def __init__(self, wikifname, output_dir):
+    template_ext = 'tpl'
+
+    def __init__(self, wikifname, output_dir, root):
         self.level = 1
+        self.root = root
         self.template = None
         self.date = None
         with open(wikifname) as fobj:
@@ -102,10 +105,13 @@ class Html:
 
         if not result:
             return
-        # TODO: check if vimwiki supports full/relative paths and/or ~ or
-        # $HOME.
-        path = result.groups()[0].strip()
-        self.template = os.path.expandvars(os.path.expanduser(path))
+        # FIXME: vimwiki supports bare names - i.e. '%template' should only
+        # contain template file basename, which will be suffixed by defined
+        # extension ('tpl' by defaul) and will be searched in vimwiki root
+        # directory.
+        basename = result.groups()[0].strip()
+        path = os.path.extsep.join([basename, self.template_ext])
+        self.template = os.path.join(self.root, path)
         self.wiki_contents = self.re_ph_template.sub('\n', self.wiki_contents)
 
     def find_date(self):
@@ -1594,8 +1600,8 @@ def s_convert_file_to_lines(wiki_contents):
     return result
 
 
-def s_convert_file(wikifile, output_dir):
-    html = Html(wikifile, output_dir)
+def s_convert_file(wikifile, output_dir, root):
+    html = Html(wikifile, output_dir, root)
     html.convert()
     return html
 
