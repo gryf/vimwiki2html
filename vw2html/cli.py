@@ -40,9 +40,13 @@ class VimWiki2HTMLConverter:
 
     def configure(self, args):
         if os.path.isdir(args.source):
-            self._wiki_path = os.path.abspath(args.source)
+            self._wiki_path = self._root_path = os.path.abspath(args.source)
         else:
             self._wiki_filepath = os.path.abspath(args.source)
+            if args.root:
+                self._root_path = args.root
+            else:
+                self._root_path = os.path.dirname(args.source)
 
         self._www_path = args.output
 
@@ -138,8 +142,9 @@ def parse_args():
     # contained wiki files when paths are provided as a relative ones. Using
     # absolute paths will override that assumption, although css file in
     # particular will be placed at the root of the output directory.
+    parser.add_argument('-r', '--root', help="Root vimwiki directory")
     parser.add_argument('-t', '--template', help="Template file")
-    parser.add_argument('-c', '--css', help="Stylesheet file.")
+    parser.add_argument('-c', '--css', help="Stylesheet file")
     return parser.parse_args()
 
 
