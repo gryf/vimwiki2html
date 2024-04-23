@@ -26,6 +26,7 @@ class Html:
     re_ph_nohtml = re.compile(r'\n?%nohtml\s*\n')
     re_ph_title = re.compile(r'\n?%title\s?(.*)\n')
     re_ph_template = re.compile(r'\n?%template\s?(.*)\n')
+    re_ph_date = re.compile(r'\n?%date\s?(.*)\n')
 
     def __init__(self, wikifname, output_dir):
         self.level = 1
@@ -51,6 +52,7 @@ class Html:
 
         self.find_title()
         self.find_template()
+        self.find_date()
 
         html_struct = s_convert_file_to_lines(self.wiki_contents)
         self.html = '\n'.join(html_struct['html'])
@@ -87,6 +89,25 @@ class Html:
         path = result.groups()[0].strip()
         self.template = os.path.expandvars(os.path.expanduser(path))
         self.wiki_contents = self.re_ph_template.sub('\n', self.wiki_contents)
+
+    def find_date(self):
+        """
+        Search for %date placeholder. If found set it and remove the line from
+        source wiki.
+        """
+        result = self.re_ph_date.search(self.wiki_contents)
+
+        if not result:
+            return
+
+        self.date = result.groups()[0].strip()
+        self.wiki_contents = self.re_ph_template.sub('\n', self.wiki_contents)
+
+        if not self.date:
+            # TODO: support different date formats - another commandline
+            # argument?
+            # TODO: support TZ for current date
+            self.date = datetime.datetime.now().strftime('%Y-%m-%d')
 
 
 glob = Generic()
