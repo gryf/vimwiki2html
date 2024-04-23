@@ -1233,18 +1233,17 @@ def s_process_tag_table(line, table, header_ids):
 
 
 def parse_line(line, state):
-    _state = Generic()
-    _state.para = state.para
-    _state.quote = state.quote
-    _state.arrow_quote = state.arrow_quote
-    _state.list_leading_spaces = state.list_leading_spaces
-    _state.pre = state.pre[:]
-    _state.math = state.math[:]
-    _state.table = state.table[:]
-    _state.lists = state.lists[:]
-    _state.deflist = state.deflist
-    _state.placeholder = state.placeholder
-    _state.header_ids = state.header_ids
+    state.para = state.para
+    state.quote = state.quote
+    state.arrow_quote = state.arrow_quote
+    state.list_leading_spaces = state.list_leading_spaces
+    state.pre = state.pre[:]
+    state.math = state.math[:]
+    state.table = state.table[:]
+    state.lists = state.lists[:]
+    state.deflist = state.deflist
+    state.placeholder = state.placeholder
+    state.header_ids = state.header_ids
 
     res_lines = []
     processed = 0
@@ -1595,15 +1594,7 @@ def s_convert_file_to_lines(wiki_contents):
     return result
 
 
-def remove_multiline_comments(contents):
-    """
-    Remove comments enclosed %%+ and +%% markings including markins as well.
-    """
-    re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
-    return re_ml_comment.sub('', contents)
-
-
-def s_convert_file(wikifile):
+def s_convert_file(wikifile, output_dir):
     html = Html(wikifile, output_dir)
     html.convert()
     return html
@@ -1618,26 +1609,6 @@ def vimwiki2html(path_html, wikifile):
 
 def all2html(path_html, force):
     pass
-
-    #vimwiki#u#echo('Saving Vimwiki files ...')
-    #save_eventignore = &eventignore
-    #&eventignore = 'all'
-    #try
-    #    wall
-    #catch
-    #    # just ignore errors
-    #&eventignore = save_eventignore
-
-    #path_html = expand(path_html)
-    #call vimwiki#path#mkdir(path_html)
-
-    #if !vimwiki#vars#get_wikilocal('html_filename_parameterization')
-    #    call vimwiki#u#echo('Deleting non-wiki html files ...')
-    #    call s_delete_html_files(path_html)
-
-    #setting_more = &more
-    #call vimwiki#u#echo('Converting wiki to html files ...')
-    #setlocal nomore
 
     ## temporarily adjust current_subdir global state variable
     #current_subdir = vimwiki#vars#get_bufferlocal('subdir')
@@ -1664,12 +1635,6 @@ def all2html(path_html, force):
     #call vimwiki#vars#set_bufferlocal('invsubdir', current_invsubdir)
 
     #created = s_create_default_CSS(path_html)
-    #if created
-    #    call vimwiki#u#echo('Default style.css has been created')
-    #call vimwiki#u#echo('HTML exported to '.path_html)
-    #call vimwiki#u#echo('Done!')
-
-    #&more = setting_more
 
 
 def s_file_exists(fname):
