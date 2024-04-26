@@ -6,6 +6,14 @@ import os
 import re
 import html
 
+try:
+    import pygments
+    import pygments.formatters
+    import pygments.lexers
+    import pygments.util
+except ImportError:
+    pygments = None
+
 
 # XXX: remove this
 ROOT = os.path.expanduser("~/vimwiki")
@@ -94,14 +102,41 @@ class Html:
                 break
             x, y = pre.span()
             indent, lexer, code = pre.groups()
-            self._code_blocks.append(self._make_pre(code))
+            self._code_blocks.append(self._make_pre(code, lexer))
             self.wiki_contents = (self.wiki_contents[:x-1] + indent +
                                   self.codeblock_mark.format(count) +
                                   self.wiki_contents[y:])
             count += 1
 
-    def _make_pre(self, code):
-        return '<pre class="code literal-block">' html.escape(code) "</pre>"
+    def _make_pre(self, code, lexer=None):
+        lexer = lexer.strip()
+
+        if lexer.lower().startswith('type='):
+            __import__('pdb').set_trace()
+            lexer = lexer.replace('type=', '')
+
+        highlighted = None
+        if pygments and lexer:
+            highlighted = self._highlight(code, lexer)
+        if not highlighted:
+            highlighted = ('<pre class="code literal-block">' +
+                           html.escape(code) + "</pre>")
+
+        return highlighted
+
+    def _convert_all_special_chars(self, text):
+        return text.replace('<', '&lt;').replace('>', '&gt;')
+
+    def _highlight(self, code, lexer):
+        if not pygments:
+            return None
+
+        try:
+            lex = pygments.lexers.get_lexer_by_name(lexer)
+        except pygments.util.ClassNotFound:
+            return None
+        fmt = pygments.formatters.HtmlFormatter(prestyles="code literal-block")
+        return pygments.highlight(code, lex, fmt)
 
     def _media(self):
         """
