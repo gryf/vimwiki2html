@@ -4,6 +4,7 @@ This is translation from vimwiki html export file to python
 import datetime
 import os
 import re
+import html
 
 
 # XXX: remove this
@@ -29,6 +30,11 @@ class Html:
     re_ph_date = re.compile(r'\n?\s*%date\s(.*)\n')
     re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
 
+    re_codeblock = re.compile(r'^(\s*){{3}([^\n]*?)(\n.*?)\n^\s*}{3}\s*$',
+                              flags=re.MULTILINE | re.DOTALL)
+
+    codeblock_mark = "⛖⛖{}⛖⛖"
+
     template_ext = 'tpl'
 
     def __init__(self, wikifname, output_dir, root):
@@ -47,6 +53,7 @@ class Html:
                                                  .basename(wikifname))[0] +
                                        '.html')
         self._title = None
+        self._code_blocks = []
 
     @property
     def title(self):
@@ -56,7 +63,11 @@ class Html:
 
     @property
     def html(self):
-        return self._html
+        html = self._html
+        for index, contents in enumerate(self._code_blocks):
+            html = html.replace(self.codeblock_mark.format(index), contents)
+
+        return html
 
     def convert(self):
         # exit early if there is %nohtml placeholder
@@ -67,12 +78,30 @@ class Html:
         # do global substitution and removal - remove multiline comments and
         # placeholders
         self._remove_multiline_comments()
+        self._separate_codeblocks()
         self._find_title()
         self._find_template()
         self._find_date()
 
         html_struct = s_convert_file_to_lines(self.wiki_contents)
         self._html = '\n'.join(html_struct['html'])
+
+    def _separate_codeblocks(self):
+        count = 0
+        while True:
+            pre = self.re_codeblock.search(self.wiki_contents)
+            if not pre:
+                break
+            x, y = pre.span()
+            indent, lexer, code = pre.groups()
+            self._code_blocks.append(self._make_pre(code))
+            self.wiki_contents = (self.wiki_contents[:x-1] + indent +
+                                  self.codeblock_mark.format(count) +
+                                  self.wiki_contents[y:])
+            count += 1
+
+    def _make_pre(self, code):
+        return '<pre class="code literal-block">' html.escape(code) "</pre>"
 
     def _media(self):
         """
