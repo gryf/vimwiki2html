@@ -17,12 +17,11 @@ class Generic:
     """
     generic namespace
     """
-    pass
 
 
 class Html:
     """
-    Simple container for the converted file
+    Represent single wiki file
     """
     re_ph_nohtml = re.compile(r'\n?%nohtml\s*\n')
     re_ph_title = re.compile(r'\n?%title\s(.*)\n')
@@ -40,7 +39,7 @@ class Html:
         with open(wikifname) as fobj:
             self.wiki_contents = fobj.read()
         self.nohtml = bool(self.re_ph_nohtml.search(self.wiki_contents))
-        self.html = ''
+        self._html = ''
         self.wiki_fname = wikifname
         self.output_dir = output_dir
         self.html_fname = os.path.join(output_dir, os.path
@@ -48,6 +47,16 @@ class Html:
                                                  .basename(wikifname))[0] +
                                        '.html')
         self._title = None
+
+    @property
+    def title(self):
+        if not self._title:
+            return os.path.basename(os.path.splitext(self.wiki_fname)[0])
+        return self._title
+
+    @property
+    def html(self):
+        return self._html
 
     def convert(self):
         # exit early if there is %nohtml placeholder
@@ -57,34 +66,28 @@ class Html:
 
         # do global substitution and removal - remove multiline comments and
         # placeholders
-        self.remove_multiline_comments()
-        self.find_title()
-        self.find_template()
-        self.find_date()
+        self._remove_multiline_comments()
+        self._find_title()
+        self._find_template()
+        self._find_date()
 
         html_struct = s_convert_file_to_lines(self.wiki_contents)
-        self.html = '\n'.join(html_struct['html'])
+        self._html = '\n'.join(html_struct['html'])
 
-    def media(self):
+    def _media(self):
         """
         Placeholder for attached media (inline images, link to local images
         and files).
         """
 
-    @property
-    def title(self):
-        if not self._title:
-            return os.path.basename(os.path.splitext(self.wiki_fname)[0])
-        return self._title
-
-    def remove_multiline_comments(self):
+    def _remove_multiline_comments(self):
         """
         Remove comments enclosed %%+ and +%% markings including markins as
         well.
         """
         self.wiki_contents = self.re_ml_comment.sub('', self.wiki_contents)
 
-    def find_title(self):
+    def _find_title(self):
         """
         Search for %title placeholder. If found set title and remove the line
         from source wiki.
@@ -96,7 +99,7 @@ class Html:
         self._title = result.groups()[0].strip()
         self.wiki_contents = self.re_ph_title.sub('\n', self.wiki_contents)
 
-    def find_template(self):
+    def _find_template(self):
         """
         Search for %template placeholder. If found set it and remove the
         line from source wiki.
@@ -105,16 +108,12 @@ class Html:
 
         if not result:
             return
-        # FIXME: vimwiki supports bare names - i.e. '%template' should only
-        # contain template file basename, which will be suffixed by defined
-        # extension ('tpl' by defaul) and will be searched in vimwiki root
-        # directory.
         basename = result.groups()[0].strip()
         path = os.path.extsep.join([basename, self.template_ext])
         self.template = os.path.join(self.root, path)
         self.wiki_contents = self.re_ph_template.sub('\n', self.wiki_contents)
 
-    def find_date(self):
+    def _find_date(self):
         """
         Search for %date placeholder. If found set it and remove the line from
         source wiki.
