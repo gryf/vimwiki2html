@@ -1662,11 +1662,10 @@ def s_convert_file_to_lines(wiki_contents):
 
     return result
 
-
-def s_convert_file(wikifile, output_dir, root):
-    html = Html(wikifile, output_dir, root)
-    html.convert()
-    return html
+def convert_file(wikifile, output_dir, root):
+    vwtohtml = VimWiki2Html(wikifile, output_dir, root)
+    vwtohtml.convert()
+    return vwtohtml
 
 
 def vimwiki2html(path_html, wikifile):

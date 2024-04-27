@@ -57,7 +57,7 @@ class VimWiki2HTMLConverter:
         if args.css:
             self._css_fname = args.css
 
-    def _applay_data_to_template(self, html_obj):
+    def _apply_data_to_template(self, html_obj):
         root_path = '../'.join(['' for _ in range(html_obj.level)])
         template = self._template
         if html_obj.template:
@@ -84,21 +84,21 @@ class VimWiki2HTMLConverter:
                             os.path.join(self._www_path, self._css_fname))
 
         if self._wiki_filepath:
-            data = [vw2html.html.s_convert_file(self._wiki_filepath,
-                                                self._www_path,
-                                                self._root_path)]
+            data = [vw2html.html.convert_file(self._wiki_filepath,
+                                              self._www_path,
+                                              self._root_path)]
         else:
             data = []
             for root, dirs, files in os.walk(self._wiki_path):
                 for fname in files:
                     data.append(vw2html.html.
-                                s_convert_file(os.path.join(root, fname),
-                                               self._www_path,
-                                               self._root_path))
+                                convert_file(os.path.join(root, fname),
+                                             self._www_path,
+                                             self._root_path))
 
         for obj in data:
             with open(obj.html_fname, 'w') as fobj:
-                fobj.write(self._applay_data_to_template(obj))
+                fobj.write(self._apply_data_to_template(obj))
         return 0
 
 
