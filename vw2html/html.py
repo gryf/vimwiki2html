@@ -24,7 +24,7 @@ re_ph_date = re.compile(r'\n?\s*%date\s(.*)\n')
 re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
 re_codeblock = re.compile(r'^(\s*){{3}([^\n]*?)(\n.*?)\n^\s*}{3}\s*$',
                           flags=re.MULTILINE | re.DOTALL)
-
+re_hr = re.compile(r'^-{4,}$')
 re_header = re.compile(r'^\s*(?P<open_level>[=]+)'
                        r'(?P<title>[^=].*?)'
                        r'(?P<close_level>[=]+)\s*$')
@@ -143,6 +143,10 @@ class VimWiki2Html:
             header = re_header.match(line)
             if header:
                 ldest.append(self._parse_header(header))
+                continue
+
+            if re_hr.match(line):
+                ldest.append('<hr />')
                 continue
 
             oldquote = self._state.quote
