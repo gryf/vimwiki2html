@@ -28,6 +28,8 @@ re_hr = re.compile(r'^-{4,}$')
 re_header = re.compile(r'^\s*(?P<open_level>[=]+)'
                        r'(?P<title>[^=].*?)'
                        r'(?P<close_level>[=]+)\s*$')
+re_bold = re.compile(r'\*([^\s][^\*]*[^\s])\*')
+
 
 class Generic:
     """
@@ -338,6 +340,9 @@ class VimWiki2Html:
 
         return res_lines
 
+    def _parse_bold(self, line):
+        return re_bold.sub(r'<strong>\g<1></strong>', line)
+
     def _separate_codeblocks(self):
         count = 0
         while True:
@@ -374,7 +379,11 @@ class VimWiki2Html:
                 f'</h{level}>\n')
 
     def _apply_attrs(self, line):
-        processed_line = line
+        """
+        Apply tags for different attributes.
+        """
+
+        processed_line = self._parse_bold(line)
         return processed_line
 
     def _make_pre(self, code, lexer=None):
