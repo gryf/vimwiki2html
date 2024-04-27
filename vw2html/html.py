@@ -5,6 +5,7 @@ import datetime
 import html
 import os
 import re
+import sys
 
 try:
     import pygments
@@ -24,6 +25,9 @@ re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
 re_codeblock = re.compile(r'^(\s*){{3}([^\n]*?)(\n.*?)\n^\s*}{3}\s*$',
                           flags=re.MULTILINE | re.DOTALL)
 
+re_header = re.compile(r'^\s*(?P<open_level>[=]+)'
+                       r'(?P<title>[^=].*?)'
+                       r'(?P<close_level>[=]+)\s*$')
 
 class Generic:
     """
@@ -31,10 +35,11 @@ class Generic:
     """
 
 
-class Html:
+class VimWiki2Html:
     """
     Represent single wiki file
     """
+    max_header_level = 6
     codeblock_mark = "⛖⛖{}⛖⛖"
 
     template_ext = 'tpl'
@@ -79,7 +84,7 @@ class Html:
         self.read_wiki_file(self.wiki_fname)
         # exit early if there is %nohtml placeholder
         if self.nohtml:
-            print(f'no content found for {self.wikifile}')
+            sys.stderr.write(f'Error: no content found for {self.wikifile}\n')
             return
 
         # do global substitution and removal - remove multiline comments and
@@ -90,8 +95,239 @@ class Html:
         self._find_template()
         self._find_date()
 
-        html_struct = s_convert_file_to_lines(self.wiki_contents)
-        self._html = '\n'.join(html_struct['html'])
+        converted = self._process_linewise()
+        self._html = '\n'.join(converted)
+
+    def _process_linewise(self):
+        lsource = self.wiki_contents.split('\n')
+
+        ldest = []
+
+        # current state of converter
+        self._state.para = 0
+        self._state.quote = 0
+        self._state.arrow_quote = 0
+        self._state.list_leading_spaces = 0
+        self._state.math = [0, 0]  # [in_math, indent_math]
+        self._state.table = []
+        self._state.deflist = 0
+        self._state.lists = []
+        self._state.header_ids = [['', 0], ['', 0], ['', 0],
+                                  ['', 0], ['', 0], ['', 0]]
+        # [last seen header text in this level, number]
+
+        # FIXME: merge thi somehow with html.escape
+        # prepare constants for s_safe_html_line()
+        s_lt_pattern = '<'
+        s_gt_pattern = '>'
+        # defaults: 'b,i,s,u,sub,sup,kbd,br,hr' - those tags should not be touched
+        #if vimwiki#vars#get_global('valid_html_tags') !=? ''
+        #    tags = "\|".join([x.strip() for x in
+        #                      vimwiki_vars.get_global('valid_html_tags')
+        #                      .split(',')])
+        #    s_lt_pattern = '\c<\%(/\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?>\)\@!'
+        #    s_gt_pattern = '\c\%(</\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?\)\@<!>'
+
+        # prepare regexps for lists
+        s_bullets = ['-', '*', '#']
+        s_numbers = (r'('
+                     r'#|\d+\)|'
+                     r'\d+\.|'
+                     r'[ivxlcdm]+\)|'
+                     r'[IVXLCDM]+\)|'
+                     r'[a-z]{1,2}\)|'
+                     r'[A-Z]{1,2}\)'
+                     ')')
+
+        for line in lsource:
+            header = re_header.match(line)
+            if header:
+                ldest.append(self._parse_header(header))
+                continue
+
+            oldquote = self._state.quote
+            lines = self._parse_line(line)
+
+            # Hack: There could be a lot of empty strings before
+            # process_tag_precode find out `quote` is over. So we should delete
+            # them all. Think of the way to refactor it out.
+            if oldquote != self._state.quote:
+                remove_blank_lines(ldest)
+
+            ldest.extend(lines)
+
+        remove_blank_lines(ldest)
+
+        # process end of file
+        # close opened tags if any
+        lines = []
+        close_precode(self._state.quote, lines)
+        close_arrow_quote(self._state.arrow_quote, lines)
+        close_para(self._state.para, lines)
+        close_math(self._state.math, lines)
+        s_close_tag_list(self._state.lists, lines)
+        close_def_list(self._state.deflist, lines)
+        close_table(self._state.table, lines, self._state.header_ids)
+        ldest.extend(lines)
+
+        return ldest
+
+    def _parse_line(self, line):
+
+        res_lines = []
+        processed = 0
+
+        # allows insertion of plain text to the final html conversion
+        # for example:
+        # %plainhtml <div class="mycustomdiv">
+        # inserts the line above to the final html file (without %plainhtml
+        # prefix)
+        trigger = '%plainhtml'
+        if trigger in line:
+            lines = []
+            # if something precedes the plain text line, make sure everything
+            # gets closed properly before inserting plain text. this ensures
+            # that the plain text is not considered as part of the preceding
+            # structure
+            if len(self._state.table):
+                self._state.table = close_table(self._state.table, lines,
+                                                self._state.header_ids)
+            if self._state.deflist:
+                self._state.deflist = close_def_list(self._state.deflist,
+                                                     lines)
+            if self._state.quote:
+                self._state.quote = close_precode(self._state.quote, lines)
+            if self._state.arrow_quote:
+                self._state.arrow_quote = close_arrow_quote(self._state
+                                                            .arrow_quote,
+                                                            lines)
+            if self._state.para:
+                self._state.para = close_para(self._state.para, lines)
+
+            # remove the trigger prefix
+            pp = line.split(trigger)[1].strip()
+
+            lines.append(pp)
+            res_lines.extend(lines)
+            return res_lines
+
+        line = html.escape(line)
+
+        ### tables
+        ##if !processed
+        ##    [processed, lines, self._state.table] = process_table(line, self._state.table, self._state.header_ids)
+        ##    call extend(res_lines, lines)
+
+
+        ### lists
+        ##if !processed
+        ##    [processed, lines, self._state.list_leading_spaces] = s_process_tag_list(line, self._state.lists, self._state.list_leading_spaces)
+        ##    if processed && self._state.quote
+        ##        self._state.quote = close_precode(self._state.quote, lines)
+        ##    if processed && self._state.arrow_quote
+        ##        self._state.arrow_quote = close_arrow_quote(self._state.arrow_quote, lines)
+        ##    if processed && self._state.math[0]
+        ##        self._state.math = close_math(self._state.math, lines)
+        ##    if processed && len(self._state.table)
+        ##        self._state.table = close_table(self._state.table, lines, self._state.header_ids)
+        ##    if processed && self._state.deflist
+        ##        self._state.deflist = close_def_list(self._state.deflist, lines)
+        ##    if processed && self._state.para
+        ##        self._state.para = close_para(self._state.para, lines)
+
+        ##    call map(lines, 'process_inline_tags(v:val, self._state.header_ids)')
+
+        ##    call extend(res_lines, lines)
+
+
+        ### headers
+        ##if !processed
+        ##    [processed, line] = s_process_tag_h(line, self._state.header_ids)
+        ##    if processed
+        ##        call s_close_tag_list(self._state.lists, res_lines)
+        ##        self._state.table = close_table(self._state.table, res_lines, self._state.header_ids)
+        ##        self._state.math = close_math(self._state.math, res_lines)
+        ##        self._state.quote = close_precode(self._state.quote || self._state.arrow_quote, res_lines)
+        ##        self._state.arrow_quote = close_arrow_quote(self._state.arrow_quote, lines)
+        ##        self._state.para = close_para(self._state.para, res_lines)
+
+        ##        call add(res_lines, line)
+
+
+        ### quotes
+        ##if !processed
+        ##    [processed, lines, self._state.quote] = s_process_tag_precode(line, self._state.quote)
+        ##    if processed && len(self._state.lists)
+        ##        call s_close_tag_list(self._state.lists, lines)
+        ##    if processed && self._state.deflist
+        ##        self._state.deflist = close_def_list(self._state.deflist, lines)
+        ##    if processed && self._state.arrow_quote
+        ##        self._state.quote = close_arrow_quote(self._state.arrow_quote, lines)
+        ##    if processed && len(self._state.table)
+        ##        self._state.table = close_table(self._state.table, lines, self._state.header_ids)
+        ##    if processed && self._state.math[0]
+        ##        self._state.math = close_math(self._state.math, lines)
+        ##    if processed && self._state.para
+        ##        self._state.para = close_para(self._state.para, lines)
+
+        ##    call map(lines, 'process_inline_tags(v:val, self._state.header_ids)')
+
+        ##    call extend(res_lines, lines)
+
+        ### arrow quotes
+        ##if !processed
+        ##    [processed, lines, self._state.arrow_quote] = s_process_tag_arrow_quote(line, self._state.arrow_quote)
+        ##    if processed && self._state.quote
+        ##        self._state.quote = close_precode(self._state.quote, lines)
+        ##    if processed && len(self._state.lists)
+        ##        call s_close_tag_list(self._state.lists, lines)
+        ##    if processed && self._state.deflist
+        ##        self._state.deflist = close_def_list(self._state.deflist, lines)
+        ##    if processed && len(self._state.table)
+        ##        self._state.table = close_table(self._state.table, lines, self._state.header_ids)
+        ##    if processed && self._state.math[0]
+        ##        self._state.math = close_math(self._state.math, lines)
+        ##    if processed && self._state.para
+        ##        self._state.para = close_para(self._state.para, lines)
+
+        ##    call map(lines, 'process_inline_tags(v:val, self._state.header_ids)')
+
+        ##    call extend(res_lines, lines)
+
+        ### definition lists
+        ##if !processed
+        ##    [processed, lines, self._state.deflist] = s_process_tag_def_list(line, self._state.deflist)
+
+        ##    call map(lines, 'process_inline_tags(v:val, self._state.header_ids)')
+
+        ##    call extend(res_lines, lines)
+
+
+        #" P
+        if not processed:
+            processed, lines, self._state.para = s_process_tag_para(line, self._state.para)
+            if processed and len(self._state.lists):
+                s_close_tag_list(self._state.lists, lines)
+            if processed and (self._state.quote or self._state.arrow_quote):
+                self._state.quote = close_precode(True, lines)
+            if processed and self._state.arrow_quote:
+                self._state.arrow_quote = close_arrow_quote(self._state.arrow_quote,
+                                                            lines)
+            if processed and self._state.math[0]:
+                self._state.math = close_math(self._state.math, res_lines)
+            if processed and len(self._state.table):
+                self._state.table = close_table(self._state.table, res_lines,
+                                                self._state.header_ids)
+
+            lines = [self._apply_attrs(x) for x in lines]
+
+            res_lines.extend(lines)
+
+        # add the rest
+        if not processed:
+            res_lines.append(line)
+
+        return res_lines
 
     def _separate_codeblocks(self):
         count = 0
@@ -106,6 +342,31 @@ class Html:
                                   self.codeblock_mark.format(count) +
                                   self.wiki_contents[y:])
             count += 1
+
+    def _parse_header(self, line_match):
+        open_level, title, close_level = line_match.groups()
+        open_level = open_level.strip()
+        close_level = close_level.strip()
+        if open_level != close_level:
+            sys.stderr.write(f"Header open level doesn't match close level: "
+                             f"'{open_level}' vs '{close_level}'")
+            return line_match.string
+        level = len(open_level)
+        if level > self.max_header_level:
+            sys.stderr.write(f"Warning: Headers cannot exceed "
+                             f"{self.max_header_level} level\n")
+            return line_match.string
+
+        title = _id = line_match["title"].strip()
+        title = self._apply_attrs(title)
+
+        return (f'<h{level} id="{_id}">'
+                f'<a href="#{_id}">{title}</a>'
+                f'</h{level}>\n')
+
+    def _apply_attrs(self, line):
+        processed_line = line
+        return processed_line
 
     def _make_pre(self, code, lexer=None):
         lexer = lexer.strip()
