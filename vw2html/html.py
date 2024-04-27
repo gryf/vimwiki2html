@@ -2,9 +2,9 @@
 This is translation from vimwiki html export file to python
 """
 import datetime
+import html
 import os
 import re
-import html
 
 try:
     import pygments
@@ -15,11 +15,14 @@ except ImportError:
     pygments = None
 
 
-# XXX: remove this
-ROOT = os.path.expanduser("~/vimwiki")
-OUTPUT_DIR = os.path.expanduser("~/vimwiki_html")
+re_ph_nohtml = re.compile(r'\n?%nohtml\s*\n')
+re_ph_title = re.compile(r'\n?%title\s(.*)\n')
+re_ph_template = re.compile(r'\n?%template\s(.*)\n')
+re_ph_date = re.compile(r'\n?\s*%date\s(.*)\n')
 
-vimwiki_vars = {}
+re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
+re_codeblock = re.compile(r'^(\s*){{3}([^\n]*?)(\n.*?)\n^\s*}{3}\s*$',
+                          flags=re.MULTILINE | re.DOTALL)
 
 
 class Generic:
@@ -32,15 +35,6 @@ class Html:
     """
     Represent single wiki file
     """
-    re_ph_nohtml = re.compile(r'\n?%nohtml\s*\n')
-    re_ph_title = re.compile(r'\n?%title\s(.*)\n')
-    re_ph_template = re.compile(r'\n?%template\s(.*)\n')
-    re_ph_date = re.compile(r'\n?\s*%date\s(.*)\n')
-    re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
-
-    re_codeblock = re.compile(r'^(\s*){{3}([^\n]*?)(\n.*?)\n^\s*}{3}\s*$',
-                              flags=re.MULTILINE | re.DOTALL)
-
     codeblock_mark = "⛖⛖{}⛖⛖"
 
     template_ext = 'tpl'
@@ -50,9 +44,8 @@ class Html:
         self.root = root
         self.template = None
         self.date = None
-        with open(wikifname) as fobj:
-            self.wiki_contents = fobj.read()
-        self.nohtml = bool(self.re_ph_nohtml.search(self.wiki_contents))
+        self.wiki_contents = None
+        self.nohtml = False
         self._html = ''
         self.wiki_fname = wikifname
         self.output_dir = output_dir
@@ -71,20 +64,26 @@ class Html:
 
     @property
     def html(self):
-        html = self._html
+        _html = self._html
         for index, contents in enumerate(self._code_blocks):
-            html = html.replace(self.codeblock_mark.format(index), contents)
+            _html = _html.replace(self.codeblock_mark.format(index), contents)
 
-        return html
+        return _html
+
+    def read_wiki_file(self, fname):
+        with open(fname) as fobj:
+            self.wiki_contents = fobj.read()
+        self.nohtml = bool(re_ph_nohtml.search(self.wiki_contents))
 
     def convert(self):
+        self.read_wiki_file(self.wiki_fname)
         # exit early if there is %nohtml placeholder
         if self.nohtml:
             print(f'no content found for {self.wikifile}')
             return
 
         # do global substitution and removal - remove multiline comments and
-        # placeholders
+        # placeholders, and separate code blocks.
         self._remove_multiline_comments()
         self._separate_codeblocks()
         self._find_title()
@@ -97,7 +96,7 @@ class Html:
     def _separate_codeblocks(self):
         count = 0
         while True:
-            pre = self.re_codeblock.search(self.wiki_contents)
+            pre = re_codeblock.search(self.wiki_contents)
             if not pre:
                 break
             x, y = pre.span()
@@ -149,46 +148,46 @@ class Html:
         Remove comments enclosed %%+ and +%% markings including markins as
         well.
         """
-        self.wiki_contents = self.re_ml_comment.sub('', self.wiki_contents)
+        self.wiki_contents = re_ml_comment.sub('', self.wiki_contents)
 
     def _find_title(self):
         """
         Search for %title placeholder. If found set title and remove the line
         from source wiki.
         """
-        result = self.re_ph_title.search(self.wiki_contents)
+        result = re_ph_title.search(self.wiki_contents)
 
         if not result:
             return
         self._title = result.groups()[0].strip()
-        self.wiki_contents = self.re_ph_title.sub('\n', self.wiki_contents)
+        self.wiki_contents = re_ph_title.sub('\n', self.wiki_contents)
 
     def _find_template(self):
         """
         Search for %template placeholder. If found set it and remove the
         line from source wiki.
         """
-        result = self.re_ph_template.search(self.wiki_contents)
+        result = re_ph_template.search(self.wiki_contents)
 
         if not result:
             return
         basename = result.groups()[0].strip()
         path = os.path.extsep.join([basename, self.template_ext])
         self.template = os.path.join(self.root, path)
-        self.wiki_contents = self.re_ph_template.sub('\n', self.wiki_contents)
+        self.wiki_contents = re_ph_template.sub('\n', self.wiki_contents)
 
     def _find_date(self):
         """
         Search for %date placeholder. If found set it and remove the line from
         source wiki.
         """
-        result = self.re_ph_date.search(self.wiki_contents)
+        result = re_ph_date.search(self.wiki_contents)
 
         if not result:
             return
 
         self.date = result.groups()[0].strip()
-        self.wiki_contents = self.re_ph_date.sub('\n', self.wiki_contents)
+        self.wiki_contents = re_ph_date.sub('\n', self.wiki_contents)
 
         if not self.date:
             # TODO: support different date formats - another commandline
