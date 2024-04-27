@@ -146,6 +146,10 @@ class VimWiki2Html:
                 ldest.append(self._parse_header(header))
                 continue
 
+            if re_comment.match(line):
+                # ignore comments
+                continue
+
             if re_hr.match(line):
                 ldest.append('<hr />')
                 continue
