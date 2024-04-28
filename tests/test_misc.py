@@ -1,3 +1,4 @@
+import datetime
 import unittest
 from unittest import mock
 
@@ -130,3 +131,36 @@ class TestTemplatePlaceholder(unittest.TestCase):
         with mock.patch("builtins.open", mock_open):
             self.converter.convert()
         self.assertEqual(self.converter.template, '/tmp/src/bar.tpl')
+
+
+class TestDatePlaceholder(unittest.TestCase):
+
+    def setUp(self):
+        # don't read any file
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
+                                      '/tmp/src')
+
+    def test_no_date(self):
+        src = 'date'
+
+        mock_open = mock.mock_open(read_data=src)
+        with mock.patch("builtins.open", mock_open):
+            self.converter.convert()
+        self.assertIsNone(self.converter.date)
+
+    def test_date_set_to_now(self):
+        src = '\n           %date \n'
+
+        mock_open = mock.mock_open(read_data=src)
+        with mock.patch("builtins.open", mock_open):
+            self.converter.convert()
+        self.assertEqual(self.converter.date,
+                         datetime.datetime.now().strftime('%Y-%m-%d'))
+
+    def test_date_set_to_date(self):
+        src = '\n           %date 1984-06-08   \n'
+
+        mock_open = mock.mock_open(read_data=src)
+        with mock.patch("builtins.open", mock_open):
+            self.converter.convert()
+        self.assertEqual(self.converter.date, '1984-06-08')

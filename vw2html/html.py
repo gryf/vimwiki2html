@@ -19,7 +19,8 @@ except ImportError:
 re_ph_nohtml = re.compile(r'^\s*%nohtml\s*$', flags=re.MULTILINE)
 re_ph_title = re.compile(r'^\s*%title\s(.*)$', flags=re.MULTILINE)
 re_ph_template = re.compile(r'^\s*%template\s(.*)$', flags=re.MULTILINE)
-re_ph_date = re.compile(r'\n?\s*%date\s(.*)\n')
+re_ph_date = re.compile(r'^\s*%date\s(.*)$', flags=re.MULTILINE)
+#re_ph_plainhtml = re.compile(r'^\s*%plainhtml\s(.*)$', flags=re.MULTILINE)
 
 re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
 re_codeblock = re.compile(r'^(\s*){{3}([^\n]*?)(\n.*?)\n^\s*}{3}\s*$',
@@ -135,7 +136,7 @@ class VimWiki2Html:
                                   ['', 0], ['', 0], ['', 0]]
         # [last seen header text in this level, number]
 
-        # FIXME: merge thi somehow with html.escape
+        # FIXME: merge this somehow with html.escape
         # prepare constants for s_safe_html_line()
         s_lt_pattern = '<'
         s_gt_pattern = '>'
@@ -209,6 +210,7 @@ class VimWiki2Html:
         # %plainhtml <div class="mycustomdiv">
         # inserts the line above to the final html file (without %plainhtml
         # prefix)
+        # XXX: this is undocumented feature/placeholder of the vimwiki
         trigger = '%plainhtml'
         if trigger in line:
             lines = []
