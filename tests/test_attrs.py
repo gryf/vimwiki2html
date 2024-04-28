@@ -37,3 +37,53 @@ class TestTextAttrs(unittest.TestCase):
         self.converter.wiki_contents = src
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
+
+    def test_italic(self):
+        src = '_foo_'
+        exp = ('<p>\n<em>foo</em>\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_double_italic(self):
+        src = 'text _italic_ text _italic_ again text'
+        exp = ('<p>\ntext <em>italic</em> text <em>italic</em> again '
+               'text\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_double_italic_extra_underscore(self):
+        src = 'text _italic_ text _italic_ again_ text'
+        exp = ('<p>\ntext <em>italic</em> text <em>italic</em> again_ '
+               'text\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_bolditalic(self):
+        src = '_*bolditalic*_'
+        exp = '<p>\n<em><strong>bolditalic</strong></em>\n</p>'
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_italicbold(self):
+        src = '*_bolditalic_*'
+        exp = '<p>\n<strong><em>bolditalic</em></strong>\n</p>'
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_italic_bold_crossed_extra_asterisk(self):
+        src = '*_bold* and italic_ *text'
+        exp = '<p>\n<strong><em>bold</strong> and italic</em> *text\n</p>'
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
