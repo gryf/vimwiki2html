@@ -1320,21 +1320,19 @@ def s_process_tag_def_list(line, deflist):
 
 def s_process_tag_para(line, para):
     lines = []
-    para = para
     processed = 0
-    ##if line =~# '^\s\{,3}\S'
-    ##    if !para
-    ##        call add(lines, '<p>')
-    ##        para = 1
-    ##    processed = 1
-    ##    if vimwiki#vars#get_wikilocal('text_ignore_newline')
-    ##        call add(lines, line)
-    ##    else
-    ##        call add(lines, line.'<br />')
-    ##elseif para && line =~# '^\s*$'
-    ##    call add(lines, '</p>')
-    ##    para = 0
-    return [processed, lines, para]
+    if line.strip():
+        if not para:
+            lines.append('<p>')
+            para = 1
+        processed = 1
+        # default is to ignore newlines (i.e. do not insert <br/> at the end
+        # of the line)
+        lines.append(line)
+    elif para and line.strip() == '':
+        lines.append('</p>')
+        para = 0
+    return processed, lines, para
 
 
 def s_process_tag_h(line, id):
