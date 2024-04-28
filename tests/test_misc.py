@@ -74,3 +74,27 @@ class TestTitlePlaceholder(unittest.TestCase):
         self.converter.wiki_contents = src
         self.converter.convert()
         self.assertEqual(self.converter.title, 'My great Title!')
+
+
+class TestNoHtmlPlaceholder(unittest.TestCase):
+
+    def setUp(self):
+        # don't read any file
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
+                                      '/tmp/src')
+
+    def test_nohtml_set(self):
+        src = '%nohtml'
+
+        mock_open = mock.mock_open(read_data=src)
+        with mock.patch("builtins.open", mock_open):
+            self.converter.convert()
+        self.assertTrue(self.converter.nohtml)
+
+    def test_nohtml_fancy(self):
+        src = '\n           %nohtml              \n'
+
+        mock_open = mock.mock_open(read_data=src)
+        with mock.patch("builtins.open", mock_open):
+            self.converter.convert()
+        self.assertTrue(self.converter.nohtml)
