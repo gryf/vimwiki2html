@@ -937,7 +937,7 @@ def close_arrow_quote(arrow_quote, ldest):
 
 def close_para(para, ldest):
     if para:
-        ldest.insert('</p>')
+        ldest.insert(0, '</p>')
         return 0
     return para
 
