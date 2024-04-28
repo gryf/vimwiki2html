@@ -87,3 +87,45 @@ class TestTextAttrs(unittest.TestCase):
         self.converter.wiki_contents = src
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
+
+    def test_strikeout(self):
+        src = '~~strikeout~~'
+        exp = '<p>\n<del>strikeout</del>\n</p>'
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_strikeout_with_extra_tilda(self):
+        src = '~~strike~out~~'
+        exp = '<p>\n<del>strike~out</del>\n</p>'
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_double_strikeout_with_extra_tilda(self):
+        src = '~~strike~out~~ and ~~again~~ text ~'
+        exp = '<p>\n<del>strike~out</del> and <del>again</del> text ~\n</p>'
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_bold_strikeout_crossed(self):
+        src = '~~*bold* and crossed out~~ *text~~'
+        exp = ('<p>\n<del><strong>bold</strong> and crossed out</del> '
+               '*text~~\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_nested_attrs(self):
+        src = '*bold _italic ~~strikeout~~ no crosed* not bold_ nor italic.'
+        exp = ('<p>\n<strong>bold <em>italic <del>strikeout</del> no '
+               'crosed</strong> not bold</em> nor italic.\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
