@@ -7,10 +7,10 @@ from vw2html import html
 class TestCode(unittest.TestCase):
 
     def setUp(self):
-        # don't read any file
-        html.VimWiki2Html.read_wiki_file = mock.MagicMock(return_value=None)
         self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
                                            '/tmp/src')
+        # don't read any file
+        self.converter.read_wiki_file = mock.MagicMock(return_value=None)
         html.pygments = mock.MagicMock()
 
     def test_multiline_pre(self):

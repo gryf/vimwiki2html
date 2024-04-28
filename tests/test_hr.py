@@ -8,10 +8,10 @@ class TestHorizontalRule(unittest.TestCase):
     tpl = '<hr/>'
 
     def setUp(self):
-        # don't read any file
-        VimWiki2Html.read_wiki_file = mock.MagicMock(return_value=None)
         self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
                                       '/tmp/src')
+        # don't read any file
+        self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 
     def test_hr(self):
         src = '-----'

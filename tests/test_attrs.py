@@ -7,10 +7,10 @@ from vw2html.html import VimWiki2Html
 class TestTextAttrs(unittest.TestCase):
 
     def setUp(self):
-        # don't read any file
-        VimWiki2Html.read_wiki_file = mock.MagicMock(return_value=None)
         self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
                                       '/tmp/src')
+        # don't read any file
+        self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 
     def test_bold(self):
         src = '*foo*'
