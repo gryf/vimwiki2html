@@ -33,6 +33,7 @@ re_italic = re.compile(r'_([^\s][^_]*[^\s])_')
 re_strike = re.compile(r'~{2}([^\s].*?[^\s])~{2}')
 re_subscript = re.compile(r',,([^,`]+),,')
 re_superscript = re.compile(r'\^([^\^]+?)\^')
+re_comment = re.compile(r'^\s*%%\s.*$')
 
 
 class Generic:
