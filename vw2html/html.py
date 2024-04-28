@@ -369,7 +369,7 @@ class VimWiki2Html:
             x, y = pre.span()
             indent, lexer, code = pre.groups()
             self._code_blocks.append(self._make_pre(code, lexer))
-            self.wiki_contents = (self.wiki_contents[:x-1] + indent +
+            self.wiki_contents = (self.wiki_contents[:x] + indent +
                                   self.codeblock_mark.format(count) +
                                   self.wiki_contents[y:])
             count += 1
