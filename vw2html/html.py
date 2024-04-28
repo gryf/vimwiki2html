@@ -31,6 +31,8 @@ re_header = re.compile(r'^\s*(?P<open_level>[=]+)'
 re_bold = re.compile(r'\*([^\s][^\*]*[^\s])\*')
 re_italic = re.compile(r'_([^\s][^_]*[^\s])_')
 re_strike = re.compile(r'~{2}([^\s].*?[^\s])~{2}')
+re_subscript = re.compile(r',,([^,`]+),,')
+re_superscript = re.compile(r'\^([^\^]+?)\^')
 
 
 class Generic:
@@ -351,6 +353,12 @@ class VimWiki2Html:
     def _parse_strikeout(self, line):
         return re_strike.sub(r'<del>\g<1></del>', line)
 
+    def _parse_subscript(self, line):
+        return re_subscript.sub(r'<sub><small>\g<1></small></sub>', line)
+
+    def _parse_superscript(self, line):
+        return re_superscript.sub(r'<sup><small>\g<1></small></sup>', line)
+
     def _separate_codeblocks(self):
         count = 0
         while True:
@@ -392,8 +400,8 @@ class VimWiki2Html:
         """
 
         processed_line = line
-        for fn in (self._parse_italic, self._parse_bold,
-                   self._parse_strikeout):
+        for fn in (self._parse_italic, self._parse_bold, self._parse_strikeout,
+                   self._parse_superscript, self._parse_subscript):
             processed_line = fn(processed_line)
         return processed_line
 

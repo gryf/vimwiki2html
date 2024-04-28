@@ -129,3 +129,43 @@ class TestTextAttrs(unittest.TestCase):
         self.converter.wiki_contents = src
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
+
+    def test_superscript(self):
+        src = 'square^2^'
+        exp = ('<p>\nsquare<sup><small>2</small></sup>\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_superscript_additional_caret(self):
+        src = 'square^^2^^'
+        exp = ('<p>\nsquare^<sup><small>2</small></sup>^\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_subscript(self):
+        src = 'meh,,2,,'
+        exp = ('<p>\nmeh<sub><small>2</small></sub>\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_subscript_extra_space(self):
+        src = 'meh ,, 2 ,,'
+        exp = ('<p>\nmeh <sub><small> 2 </small></sub>\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_subscript_empty(self):
+        src = 'meh ,,,,'
+        exp = ('<p>\nmeh ,,,,\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
