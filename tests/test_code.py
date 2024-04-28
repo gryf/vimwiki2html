@@ -62,3 +62,63 @@ class TestCode(unittest.TestCase):
         self.converter.wiki_contents = src
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
+
+    def test_inline_code(self):
+        src = '`foo`'
+        exp = '<p>\n<code>foo</code>\n</p>'
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_inline_double_code(self):
+        src = '`foo` and `bar`'
+        exp = '<p>\n<code>foo</code> and <code>bar</code>\n</p>'
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_inline_multiline_triple_code(self):
+        src = '`foo`, `bar`\nand `baz`'
+        exp = ('<p>\n<code>foo</code>, '
+               '<code>bar</code>\nand <code>baz</code>\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_inline_code_invalid(self):
+        src = '`foo` and ```'
+        exp = '<p>\n<code>foo</code> and ```\n</p>'
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_inline_code_colors_black(self):
+        src = '`#000000`'
+        exp = ("<p>\n<code style='background-color:#000000;color:white;'>"
+               "#000000</code>\n</p>")
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_inline_code_colors_white(self):
+        src = '`#FFFFFF`'
+        exp = ("<p>\n<code style='background-color:#FFFFFF;color:black;'>"
+               "#FFFFFF</code>\n</p>")
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_inline_code_colors_orange(self):
+        src = '`#ff8800`'
+        exp = ("<p>\n<code style='background-color:#ff8800;color:black;'>"
+               "#ff8800</code>\n</p>")
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)

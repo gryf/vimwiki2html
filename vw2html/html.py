@@ -34,6 +34,10 @@ re_strike = re.compile(r'~{2}([^\s].*?[^\s])~{2}')
 re_subscript = re.compile(r',,([^,`]+),,')
 re_superscript = re.compile(r'\^([^\^]+?)\^')
 re_comment = re.compile(r'^\s*%%\s.*$')
+re_hexcolor = re.compile(r'^(?P<hexcolor>#(?P<red>[a-fA-F0-9]{2})'
+                         r'(?P<green>[a-fA-F0-9]{2})'
+                         r'(?P<blue>[a-fA-F0-9]{2}))$')
+re_code = re.compile(r'`([^`]+?)`')
 
 
 class Generic:
@@ -48,6 +52,7 @@ class VimWiki2Html:
     """
     max_header_level = 6
     codeblock_mark = "⛖⛖{}⛖⛖"
+    inline_code_mark = "⛗⛗{}⛗⛗"
 
     template_ext = 'tpl'
 
@@ -67,6 +72,8 @@ class VimWiki2Html:
                                        '.html')
         self._title = None
         self._code_blocks = []
+        self._inline_codes = []
+        self._inline_codes_count = 0
         self._state = Generic()
 
     @property
@@ -80,6 +87,9 @@ class VimWiki2Html:
         _html = self._html
         for index, contents in enumerate(self._code_blocks):
             _html = _html.replace(self.codeblock_mark.format(index), contents)
+        for index, contents in enumerate(self._inline_codes):
+            _html = _html.replace(self.inline_code_mark.format(index),
+                                  contents)
 
         return _html
 
@@ -360,6 +370,33 @@ class VimWiki2Html:
     def _parse_superscript(self, line):
         return re_superscript.sub(r'<sup><small>\g<1></small></sup>', line)
 
+    def _parse_inline_code(self, line):
+        """
+        Return code tagged line.
+
+        Check if code matches color in format "#rrggbb" where rr, gg and bb is
+        in hexadecimal format, and in that case return colored version of such
+        string.
+        """
+
+        threshold = 0.5
+        style = ''
+        match = re_hexcolor.match(line)
+        if match:
+            color = match.groupdict()
+            hexcolor = color['hexcolor']
+            red = int(color['red'], 16)
+            green = int(color['green'], 16)
+            blue = int(color['blue'], 16)
+
+            fg_color = 'white'
+            if (0.299 * red + 0.587 * green + 0.114 * blue) / 0xFF > threshold:
+                fg_color = 'black'
+
+            style = f" style='background-color:{hexcolor};color:{fg_color};'"
+
+        return f"<code{style}>{line}</code>"
+
     def _separate_codeblocks(self):
         count = 0
         while True:
@@ -373,6 +410,23 @@ class VimWiki2Html:
                                   self.codeblock_mark.format(count) +
                                   self.wiki_contents[y:])
             count += 1
+
+    def _separate_inline_codes(self, line):
+        codes = re_code.findall(line)
+        line = re_code.sub(self.inline_code_mark, line)
+
+        if not codes:
+            return line
+
+        line = line.format(*[str(x) for x in range(self._inline_codes_count,
+                                                   self._inline_codes_count +
+                                                   len(codes))])
+
+        for code in codes:
+            self._inline_codes.append(self._parse_inline_code(code))
+            self._inline_codes_count += 1
+
+        return line
 
     def _parse_header(self, line_match):
         open_level, title, close_level = line_match.groups()
@@ -398,15 +452,21 @@ class VimWiki2Html:
     def _apply_attrs(self, line):
         """
         Apply tags for different attributes.
-        """
 
+        Parse markup fdor bold, italic, strikethrough, superscipt, subscript
+        and code.
+        """
         processed_line = line
-        for fn in (self._parse_italic, self._parse_bold, self._parse_strikeout,
+        for fn in (self._separate_inline_codes, self._parse_italic,
+                   self._parse_bold, self._parse_strikeout,
                    self._parse_superscript, self._parse_subscript):
             processed_line = fn(processed_line)
         return processed_line
 
     def _make_pre(self, code, lexer=None):
+        """
+        Create <pre></pre> tag to contain passed code.
+        """
         lexer = lexer.strip()
 
         if lexer.lower().startswith('type='):
@@ -417,14 +477,29 @@ class VimWiki2Html:
             highlighted = self._highlight(code, lexer)
         if not highlighted:
             highlighted = ('<pre class="code literal-block">' +
-                           html.escape(code) + "</pre>")
+                           html.escape(code) + '</pre>')
 
         return highlighted
 
-    def _convert_all_special_chars(self, text):
-        return text.replace('<', '&lt;').replace('>', '&gt;')
-
     def _highlight(self, code, lexer):
+        """
+        Try to syntax highlight code with the pygments.
+
+        If user put in the wiki preformatted block and mark it as python:
+            {{{ python
+              …
+        for support for highlight in this converted only, or:
+            {{{ type=py
+              …
+        for vimwiki syntax (see help), try to use pygments if available to
+        colorize the code. It may be whatever lexer pygments supports.
+
+        Although by default vimwiki use file extension is passing to pygments
+        to determine the syntax (a temp file with extension taken from
+        'type=<extension>' will be passed to pygments), this script will try
+        to use whatever direct lexer name passed as bare word
+        (not type= attribute).
+        """
         if not pygments:
             return None
 
@@ -671,25 +746,6 @@ def s_tag_super(value):
 
 def s_tag_sub(value):
     return '<sub><small>' + s_mid(value, 2) + '</small></sub>'
-
-
-def tag_code(value):
-    retstr = '<code'
-
-    string = s_mid(value, 1)
-    match = match(string, '^#[a-fA-F0-9]\{6\}$')
-
-    if match != -1:
-        r = eval('0x' + string[1:2])
-        g = eval('0x' + string[3:4])
-        b = eval('0x' + string[5:6])
-
-        fg_color = 'black' if (((0.299 * r + 0.587 * g + 0.114 * b) / 0xFF) > 0.5) else 'white'
-
-        retstr += " style='background-color:" + string + ';color:' + fg_color + ";'"
-
-    retstr += '>' + safe_html_preformatted(string) + '</code>'
-    return retstr
 
 
 def s_incl_match_arg(nn_index):
