@@ -67,3 +67,15 @@ class TestHeaders(unittest.TestCase):
         self.converter.wiki_contents = src
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
+
+    def test_attrs_in_header(self):
+        self.maxDiff = None
+        title = "header with _italic_ *bold* ~~and crossed~~"
+        src = f"== {title} =="
+        exp = (f'<h2 id="{title}"><a href="#{title}">header with '
+               f'<em>italic</em> <strong>bold</strong> <del>and '
+               f'crossed</del></a></h2>\n')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
