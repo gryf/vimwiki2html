@@ -18,7 +18,7 @@ except ImportError:
 
 re_ph_nohtml = re.compile(r'^\s*%nohtml\s*$', flags=re.MULTILINE)
 re_ph_title = re.compile(r'^\s*%title\s(.*)$', flags=re.MULTILINE)
-re_ph_template = re.compile(r'\n?%template\s(.*)\n')
+re_ph_template = re.compile(r'^\s*%template\s(.*)$', flags=re.MULTILINE)
 re_ph_date = re.compile(r'\n?\s*%date\s(.*)\n')
 
 re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
@@ -538,8 +538,11 @@ class VimWiki2Html:
 
     def _find_template(self):
         """
-        Search for %template placeholder. If found set it and remove the
-        line from source wiki.
+        Search for %template placeholder.
+
+        The argument for the %template placeholder should be name of the file
+        without a path (root of the vimwiki) and extension (.tpl by defult).
+        For now it's calculated using self.root as the vimwiki root directory.
         """
         result = re_ph_template.search(self.wiki_contents)
 

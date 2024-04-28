@@ -98,3 +98,35 @@ class TestNoHtmlPlaceholder(unittest.TestCase):
         with mock.patch("builtins.open", mock_open):
             self.converter.convert()
         self.assertTrue(self.converter.nohtml)
+
+
+class TestTemplatePlaceholder(unittest.TestCase):
+
+    def setUp(self):
+        # don't read any file
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
+                                      '/tmp/src')
+
+    def test_template_without_arg(self):
+        src = '%template'
+
+        mock_open = mock.mock_open(read_data=src)
+        with mock.patch("builtins.open", mock_open):
+            self.converter.convert()
+        self.assertIsNone(self.converter.template)
+
+    def test_no_template(self):
+        src = 'template'
+
+        mock_open = mock.mock_open(read_data=src)
+        with mock.patch("builtins.open", mock_open):
+            self.converter.convert()
+        self.assertIsNone(self.converter.template)
+
+    def test_custom_template(self):
+        src = '\n           %template   bar           \n'
+
+        mock_open = mock.mock_open(read_data=src)
+        with mock.patch("builtins.open", mock_open):
+            self.converter.convert()
+        self.assertEqual(self.converter.template, '/tmp/src/bar.tpl')
