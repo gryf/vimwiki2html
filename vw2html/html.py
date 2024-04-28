@@ -17,7 +17,7 @@ except ImportError:
 
 
 re_ph_nohtml = re.compile(r'\n?%nohtml\s*\n')
-re_ph_title = re.compile(r'\n?%title\s(.*)\n')
+re_ph_title = re.compile(r'^\s*%title\s(.*)$', flags=re.MULTILINE)
 re_ph_template = re.compile(r'\n?%template\s(.*)\n')
 re_ph_date = re.compile(r'\n?\s*%date\s(.*)\n')
 
