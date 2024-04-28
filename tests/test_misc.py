@@ -37,6 +37,20 @@ class TestComments(unittest.TestCase):
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
 
+    def test_multiline_comments(self):
+        src = ('Pharetra  rhoncus *massa. %%+Cras et* ligula vel '
+               'quam\ntristique commodo. Sed est lectus, mollis quis, '
+               'lacinia nec,\n\n+%%Vestibulum _ante `ipsum primis %%+in_ '
+               'faucibus` orci \nluctus et ultrices posuere cubilia Curae; '
+               'Morbi urna dui, \nfermentum quis, feugiat imperdiet, '
+               'imperdiet id, +%%sapien.  \n')
+        exp = ('<p>\nPharetra  rhoncus *massa. Vestibulum _ante `ipsum primis'
+               ' sapien.  \n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
 
 class TestTitlePlaceholder(unittest.TestCase):
 
