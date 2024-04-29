@@ -5,7 +5,6 @@ from vw2html.html import VimWiki2Html
 
 
 class TestHorizontalRule(unittest.TestCase):
-    tpl = '<hr/>'
 
     def setUp(self):
         self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
