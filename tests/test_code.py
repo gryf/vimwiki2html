@@ -4,7 +4,7 @@ from unittest import mock
 from vw2html import html
 
 
-class TestCode(unittest.TestCase):
+class TestCodeBlock(unittest.TestCase):
 
     def setUp(self):
         self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
@@ -62,6 +62,16 @@ class TestCode(unittest.TestCase):
         self.converter.wiki_contents = src
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
+
+
+class TestInlineCode(unittest.TestCase):
+
+    def setUp(self):
+        self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
+                                           '/tmp/src')
+        # don't read any file
+        self.converter.read_wiki_file = mock.MagicMock(return_value=None)
+        html.pygments = mock.MagicMock()
 
     def test_inline_code(self):
         src = '`foo`'

@@ -44,9 +44,9 @@ class VimWiki2HTMLConverter:
         else:
             self._wiki_filepath = os.path.abspath(args.source)
             if args.root:
-                self._root_path = args.root
+                self._root_path = os.path.abspath(args.root)
             else:
-                self._root_path = os.path.dirname(args.source)
+                self._root_path = os.path.abspath(os.path.dirname(args.source))
 
         self._www_path = args.output
 
@@ -76,12 +76,13 @@ class VimWiki2HTMLConverter:
     def convert(self):
         # copy css file
         if self._css_fname:
-            if os.path.isabs(self._css_fname):
-                shutil.copy(self._css_fname, self._www_path)
-            else:
-                os.makedirs(self._www_path, os.path.dirname(self._css_fname))
-                shutil.copy(os.path.join(self._wiki_path, self._css_fname),
-                            os.path.join(self._www_path, self._css_fname))
+            fulldname = os.path.abspath(os.path.dirname(self._css_fname))
+            dst = self._www_path
+            if fulldname != self._root_path:
+                dname = fulldname.replace(self._root_path)[1:]
+                os.makedirs(self._www_path, dname)
+                dst = os.path.join(self._www_path, dname)
+            shutil.copy(self._css_fname, dst)
 
         if self._wiki_filepath:
             data = [vw2html.html.convert_file(self._wiki_filepath,
