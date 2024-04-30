@@ -29,9 +29,11 @@ re_hr = re.compile(r'^-{4,}$')
 re_header = re.compile(r'^\s*(?P<open_level>[=]+)'
                        r'(?P<title>[^=].*?)'
                        r'(?P<close_level>[=]+)\s*$')
-re_bold = re.compile(r'\*([^\s][^\*]*[^\s])\*')
-re_italic = re.compile(r'_([^\s][^_]*[^\s])_')
-re_strike = re.compile(r'~{2}([^\s].*?[^\s])~{2}')
+re_bold = re.compile(r'(?:(?<=[^a-zA-Z0-9])|^)\*([^\*\s][^\*]*?[^\s])\*'
+                     r'(?![a-zA-Z0-9])')
+re_italic = re.compile(r'(?:(?<=[^a-zA-Z0-9])|^)_([^_\s][^_]*?[^\s])_'
+                       r'(?![a-zA-Z0-9])')
+re_strike = re.compile(r'~{2}([^~]+?)~{2}')
 re_subscript = re.compile(r',,([^,`]+),,')
 re_superscript = re.compile(r'\^([^\^]+?)\^')
 re_comment = re.compile(r'^\s*%%\s.*$')
@@ -577,26 +579,9 @@ class VimWiki2Html:
 
 glob = Generic()
 
-s_rxBold = (r'\%(^\|\s\|[[:punct:]]\)\@<=\*\%([^*`[:space:]][^*`]*[^*`'
-            r'[:space:]]\|[^*`[:space:]]\)\*\%([[:punct:]]\|\s\|$\)\@=')
-
-# text: _emphasis_ or *emphasis*
-s_rxItalic = '\%(^\|\s\|[[:punct:]]\)\@<=_\%([^_`[:space:]][^_`]*[^_`[:space:]]\|[^_`[:space:]]\)_\%([[:punct:]]\|\s\|$\)\@='
 
 # text: $ equation_inline $
 s_rxEqIn = '\$[^$`]\+\$'
-
-# text: `code`
-s_rxCode = '`[^`]\+`'
-
-# text: ~~deleted text~~
-s_rxDelText = '\~\~[^~`]\+\~\~'
-
-# text: ^superscript^
-s_rxSuperScript = '\^[^^`]\+\^'
-
-# text: ,,subscript,,
-s_rxSubScript = ',,[^,`]\+,,'
 
 # match all the tags in the wiki and replace them, besides defined, simple ones
 re_safe_html = re.compile(r'<(\s*/*[^b,i,s,u,sub,sup,kbd,br,hr]*?)>')
