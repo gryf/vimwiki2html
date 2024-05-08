@@ -160,7 +160,7 @@ class TestDatePlaceholder(unittest.TestCase):
         mock_open = mock.mock_open(read_data=src)
         with mock.patch("builtins.open", mock_open):
             self.converter.convert()
-        self.assertIsNone(self.converter.date)
+        self.assertEqual(self.converter.date, '')
 
     def test_date_set_to_now(self):
         src = '\n           %date \n'
