@@ -41,6 +41,8 @@ re_hexcolor = re.compile(r'^(?P<hexcolor>#(?P<red>[a-fA-F0-9]{2})'
                          r'(?P<green>[a-fA-F0-9]{2})'
                          r'(?P<blue>[a-fA-F0-9]{2}))$')
 re_code = re.compile(r'`([^`]+?)`')
+# TODO: make tag list configurable
+re_safe_html = re.compile(r'<(\s*/*(?!(?:b|i|u|sub|sup|kbd|br|hr))\w.*?)>')
 
 
 class Generic:
@@ -242,7 +244,7 @@ class VimWiki2Html:
             res_lines.extend(lines)
             return res_lines
 
-        line = html.escape(line)
+        line = self._html_escape(line)
 
         ### tables
         ##if !processed
@@ -576,15 +578,18 @@ class VimWiki2Html:
             # TODO: support TZ for current date
             self.date = datetime.datetime.now().strftime('%Y-%m-%d')
 
+    def _html_escape(self, line):
+        line = line.replace('&', '&amp;')
+        return re_safe_html.sub('&lt;\\1&gt;', line)
 
-glob = Generic()
+
 
 
 # text: $ equation_inline $
 s_rxEqIn = '\$[^$`]\+\$'
 
 # match all the tags in the wiki and replace them, besides defined, simple ones
-re_safe_html = re.compile(r'<(\s*/*[^b,i,s,u,sub,sup,kbd,br,hr]*?)>')
+#re_safe_html = re.compile(r'<(\s*/*[^b,i,s,u,sub,sup,kbd,br,hr]*?)>')
 
 
 def remove_blank_lines(lines):
