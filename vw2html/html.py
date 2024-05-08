@@ -1,5 +1,5 @@
 """
-This is translation from vimwiki html export file to python
+This is kind of translation from vimwiki html export file to python
 """
 import datetime
 import html
@@ -65,7 +65,7 @@ class VimWiki2Html:
         self.level = 1
         self.root = root
         self.template = None
-        self.date = None
+        self.date = ''
         self.wiki_contents = None
         self.nohtml = False
         self._html = ''
@@ -142,8 +142,8 @@ class VimWiki2Html:
 
         # FIXME: merge this somehow with html.escape
         # prepare constants for s_safe_html_line()
-        s_lt_pattern = '<'
-        s_gt_pattern = '>'
+        ##s_lt_pattern = '<'
+        ##s_gt_pattern = '>'
         # defaults: 'b,i,s,u,sub,sup,kbd,br,hr' - those tags should not be touched
         #if vimwiki#vars#get_global('valid_html_tags') !=? ''
         #    tags = "\|".join([x.strip() for x in
