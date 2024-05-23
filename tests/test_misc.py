@@ -178,3 +178,36 @@ class TestDatePlaceholder(unittest.TestCase):
         with mock.patch("builtins.open", mock_open):
             self.converter.convert()
         self.assertEqual(self.converter.date, '1984-06-08')
+
+
+class TestPlainHTMLPlaceholder(unittest.TestCase):
+
+    def setUp(self):
+        # don't read any file
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
+                                      '/tmp/src')
+
+    def test_no_placeholder(self):
+        src = 'foo'
+
+        mock_open = mock.mock_open(read_data=src)
+        with mock.patch("builtins.open", mock_open):
+            self.converter.convert()
+        self.assertEqual(self.converter.html, '<p>\nfoo\n</p>')
+
+    def test_placeholder_with_suffix(self):
+        src = 'foo %plainhtml <i>bar</i>'
+
+        mock_open = mock.mock_open(read_data=src)
+        with mock.patch("builtins.open", mock_open):
+            self.converter.convert()
+        self.assertEqual(self.converter.html, '<i>bar</i>')
+
+    def test_double_placeholder(self):
+        src = '%plainhtml <div>\nmeh\n%plainhtml <i>bar</i>'
+
+        mock_open = mock.mock_open(read_data=src)
+        with mock.patch("builtins.open", mock_open):
+            self.converter.convert()
+        self.assertEqual(self.converter.html,
+                         '<div>\n<p>\nmeh\n</p>\n<i>bar</i>')

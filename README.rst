@@ -41,7 +41,9 @@ What's supported:
   - Date
   - Template
   - Nohtml
-
+  - Plainhtml (this one is undocumented, and allows to add explicit html tags
+    which follows that placeholder. It's inline only, which means no span on
+    multiple lines, although this placeholder can be repeated several times)
 
 What's not:
 
@@ -85,11 +87,6 @@ What's not:
 - Mathematical formulae (both - inline and block)
 - Blockquotes
 - Tags
-- Placeholders:
-
-  - Plainhtml (this one is undocumented, and allows to add explicit html tags
-    which follows that placeholder. It's inline only, which means no span on
-    multiple lines, although this placeholder can be repeated several times)
 
 - Explicit html tags (default list is ``b``, ``i``, ``s``, ``u``, ``sub``,
   ``sup``, ``kbd``, ``br`` and ``hr``.
