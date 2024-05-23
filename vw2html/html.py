@@ -1,6 +1,7 @@
 """
 This is kind of translation from vimwiki html export file to python
 """
+import dataclasses
 import datetime
 import html
 import os
@@ -14,6 +15,23 @@ try:
     import pygments.util
 except ImportError:
     pygments = None
+
+
+@dataclasses.dataclass
+class State:
+    para: bool = False
+    quote: bool = False
+    arrow_quote: bool = False
+    list_leading_spaces: bool = False
+    # [in_math, indent_math]
+    math: list[int, str] = dataclasses.field(default_factory=list)
+    table: list = dataclasses.field(default_factory=list)
+    deflist: bool = False
+    lists: list = dataclasses.field(default_factory=list)
+    # [last seen header text in this level, number]
+    header_ids: list = dataclasses.field(default_factory=list)
+    # [][['', 0], ['', 0], ['', 0],
+    #                    ['', 0], ['', 0], ['', 0]]
 
 
 class List:
@@ -44,7 +62,7 @@ re_ph_nohtml = re.compile(r'^\s*%nohtml\s*$', flags=re.MULTILINE)
 re_ph_title = re.compile(r'^\s*%title\s(.*)$', flags=re.MULTILINE)
 re_ph_template = re.compile(r'^\s*%template\s(.*)$', flags=re.MULTILINE)
 re_ph_date = re.compile(r'^\s*%date\s(.*)$', flags=re.MULTILINE)
-#re_ph_plainhtml = re.compile(r'^\s*%plainhtml\s(.*)$', flags=re.MULTILINE)
+# re_ph_plainhtml = re.compile(r'^\s*%plainhtml\s(.*)$', flags=re.MULTILINE)
 
 re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
 re_codeblock = re.compile(r'^(\s*){{3}([^\n]*?)(\n.*?)\n^\s*}{3}\s*$',
@@ -68,14 +86,8 @@ re_code = re.compile(r'`([^`]+?)`')
 re_list = re.compile(r'^(\s*)([\*\-#]|[\d]+[\.\)])\s(?:\[([^]])\]\s?)?'
                      r'(.*)$')
 re_indented_text = re.compile(r'^(\s+)(.*)$')
-# TODO: make tag list configurable
+# TODO(gryf): make tag list configurable
 re_safe_html = re.compile(r'<(\s*/*(?!(?:b|i|u|sub|sup|kbd|br|hr))\w.*?)>')
-
-
-class Generic:
-    """
-    generic namespace
-    """
 
 
 class VimWiki2Html:
@@ -106,7 +118,7 @@ class VimWiki2Html:
         self._code_blocks = []
         self._inline_codes = []
         self._inline_codes_count = 0
-        self._state = Generic()
+        self._state = State()
         self._line_processed = False
         self._lists = []
 
@@ -157,29 +169,25 @@ class VimWiki2Html:
         ldest = []
 
         # current state of converter
-        self._state.para = 0
-        self._state.quote = 0
-        self._state.arrow_quote = 0
-        self._state.list_leading_spaces = 0
         self._state.math = [0, 0]  # [in_math, indent_math]
-        self._state.table = []
         self._state.deflist = 0
         self._state.lists = []
         # [last seen header text in this level, number]
         self._state.header_ids = [['', 0], ['', 0], ['', 0],
                                   ['', 0], ['', 0], ['', 0]]
 
-        # FIXME: merge this somehow with html.escape
+        # TODO(gryf): merge this somehow with html.escape
         # prepare constants for s_safe_html_line()
-        ##s_lt_pattern = '<'
-        ##s_gt_pattern = '>'
-        # defaults: 'b,i,s,u,sub,sup,kbd,br,hr' - those tags should not be touched
-        #if vimwiki#vars#get_global('valid_html_tags') !=? ''
-        #    tags = "\|".join([x.strip() for x in
-        #                      vimwiki_vars.get_global('valid_html_tags')
-        #                      .split(',')])
-        #    s_lt_pattern = '\c<\%(/\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?>\)\@!'
-        #    s_gt_pattern = '\c\%(</\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?\)\@<!>'
+        # #s_lt_pattern = '<'
+        # #s_gt_pattern = '>'
+        # defaults: 'b,i,s,u,sub,sup,kbd,br,hr' - those tags should not be
+        # touched
+        # if vimwiki#vars#get_global('valid_html_tags') !=? ''
+        #     tags = "\|".join([x.strip() for x in
+        #                       vimwiki_vars.get_global('valid_html_tags')
+        #                       .split(',')])
+        #     s_lt_pattern = '\c<\%(/\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?>\)\@!'
+        #     s_gt_pattern = '\c\%(</\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?\)\@<!>'
 
         self._previus_line = None
         for line in lsource:
@@ -228,43 +236,68 @@ class VimWiki2Html:
 
         return ldest
 
-    def _parse_line(self, line):
+    def _handle_plainhtml(self, line):
+        """
+        Allows insertion of plain text to the final html conversion
 
-        res_lines = []
-        processed = 0
+        for example:
 
-        # allows insertion of plain text to the final html conversion
-        # for example:
-        # %plainhtml <div class="mycustomdiv">
-        # inserts the line above to the final html file (without %plainhtml
-        # prefix)
-        # XXX: this is undocumented feature/placeholder of the vimwiki
+        %plainhtml <div class="mycustomdiv">
+
+        inserts the line with div in current place unchanged into html output.
+        Can be used multiple times.
+
+        NOTE: this is undocumented feature/placeholder of the vimwiki
+        """
         trigger = '%plainhtml'
-        if trigger in line:
-            lines = []
-            # if something precedes the plain text line, make sure everything
-            # gets closed properly before inserting plain text. this ensures
-            # that the plain text is not considered as part of the preceding
-            # structure
-            if len(self._state.table):
-                self._state.table = close_table(self._state.table, lines,
-                                                self._state.header_ids)
-            if self._state.deflist:
-                self._state.deflist = close_def_list(self._state.deflist,
-                                                     lines)
-            if self._state.quote:
-                self._state.quote = close_precode(self._state.quote, lines)
-            if self._state.arrow_quote:
-                self._state.arrow_quote = close_arrow_quote(self._state
-                                                            .arrow_quote,
-                                                            lines)
-            if self._state.para:
-                self._state.para = close_para(self._state.para, lines)
+        if trigger not in line:
+            return
 
-            # remove the trigger prefix
-            pp = line.split(trigger)[1].strip()
+        self._line_processed = True
+        lines = []
+        if len(self._state.table):
+            self._state.table = close_table(self._state.table, lines,
+                                            self._state.header_ids)
+        if self._state.deflist:
+            self._state.deflist = close_def_list(self._state.deflist,
+                                                 lines)
+        if self._state.quote:
+            self._state.quote = close_precode(self._state.quote, lines)
+        if self._state.arrow_quote:
+            self._state.arrow_quote = close_arrow_quote(self._state
+                                                        .arrow_quote,
+                                                        lines)
+        if self._state.para:
+            self._state.para = close_para(self._state.para, lines)
 
-            lines.append(pp)
+        # remove the trigger prefix
+        pp = line.split(trigger)[1].strip()
+
+        lines.append(pp)
+        return lines
+
+    def _handle_paragraph(self, line):
+        lines = []
+        if line.strip():
+            if not self._state.para:
+                lines.append('<p>')
+                self._state.para = True
+            self._line_processed = True
+            # default is to ignore newlines (i.e. do not insert <br/> at the
+            # end of the line)
+            lines.append(line)
+        elif self._state.para and line.strip() == '':
+            lines.append('</p>')
+            self._state.para = False
+
+        return lines
+
+    def _parse_line(self, line):
+        res_lines = []
+        self._line_processed = False
+
+        lines = self._handle_plainhtml(line)
+        if self._line_processed:
             res_lines.extend(lines)
             return res_lines
 
@@ -333,19 +366,20 @@ class VimWiki2Html:
         ##    call extend(res_lines, lines)
 
 
-        #" P
-        processed, lines, self._state.para = s_process_tag_para(line, self._state.para)
-        #if processed and len(self._lists):
-        if processed and len(self._lists):
+        # Paragraphs
+        lines = self._handle_paragraph(line)
+        if self._line_processed and self._lists:
             res_lines.extend(self._close_lists())
-        if processed and (self._state.quote or self._state.arrow_quote):
+        if self._line_processed and (self._state.quote or
+                                     self._state.arrow_quote):
             self._state.quote = close_precode(True, lines)
-        if processed and self._state.arrow_quote:
-            self._state.arrow_quote = close_arrow_quote(self._state.arrow_quote,
+        if self._line_processed and self._state.arrow_quote:
+            self._state.arrow_quote = close_arrow_quote(self._state
+                                                        .arrow_quote,
                                                         lines)
-        if processed and self._state.math[0]:
+        if self._line_processed and self._state.math[0]:
             self._state.math = close_math(self._state.math, res_lines)
-        if processed and len(self._state.table):
+        if self._line_processed and len(self._state.table):
             self._state.table = close_table(self._state.table, res_lines,
                                             self._state.header_ids)
 
@@ -354,7 +388,7 @@ class VimWiki2Html:
         res_lines.extend(lines)
 
         # add the rest
-        if not processed:
+        if not self._line_processed:
             res_lines.append(line)
 
         return res_lines
