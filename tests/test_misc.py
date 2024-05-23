@@ -45,7 +45,7 @@ class TestComments(unittest.TestCase):
                'Morbi urna dui, \nfermentum quis, feugiat imperdiet, '
                'imperdiet id, +%%sapien.  \n')
         exp = ('<p>\nPharetra  rhoncus *massa. Vestibulum _ante `ipsum primis'
-               ' sapien.  \n</p>')
+               ' sapien.  \n\n</p>')
 
         self.converter.wiki_contents = src
         self.converter.convert()

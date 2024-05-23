@@ -16,6 +16,30 @@ except ImportError:
     pygments = None
 
 
+class List:
+    def __init__(self, indent, list_type='ul'):
+        self.list_type = list_type
+        self.indent = indent
+
+    def __lt__(self, other):
+        return len(self.indent) < len(other.indent)
+
+    def __le__(self, other):
+        return len(self.indent) <= len(other.indent)
+
+    def __eq__(self, other):
+        return len(self.indent) == len(other.indent)
+
+    def __ne__(self, other):
+        return len(self.indent) != len(other.indent)
+
+    def __gt__(self, other):
+        return len(self.indent) > len(other.indent)
+
+    def __ge__(self, other):
+        return len(self.indent) >= len(other.indent)
+
+
 re_ph_nohtml = re.compile(r'^\s*%nohtml\s*$', flags=re.MULTILINE)
 re_ph_title = re.compile(r'^\s*%title\s(.*)$', flags=re.MULTILINE)
 re_ph_template = re.compile(r'^\s*%template\s(.*)$', flags=re.MULTILINE)
@@ -41,6 +65,9 @@ re_hexcolor = re.compile(r'^(?P<hexcolor>#(?P<red>[a-fA-F0-9]{2})'
                          r'(?P<green>[a-fA-F0-9]{2})'
                          r'(?P<blue>[a-fA-F0-9]{2}))$')
 re_code = re.compile(r'`([^`]+?)`')
+re_list = re.compile(r'^(\s*)([\*\-#]|[\d]+[\.\)])\s(?:\[([^]])\]\s?)?'
+                     r'(.*)$')
+re_indented_text = re.compile(r'^(\s+)(.*)$')
 # TODO: make tag list configurable
 re_safe_html = re.compile(r'<(\s*/*(?!(?:b|i|u|sub|sup|kbd|br|hr))\w.*?)>')
 
@@ -80,6 +107,8 @@ class VimWiki2Html:
         self._inline_codes = []
         self._inline_codes_count = 0
         self._state = Generic()
+        self._line_processed = False
+        self._lists = []
 
     @property
     def title(self):
@@ -136,9 +165,9 @@ class VimWiki2Html:
         self._state.table = []
         self._state.deflist = 0
         self._state.lists = []
+        # [last seen header text in this level, number]
         self._state.header_ids = [['', 0], ['', 0], ['', 0],
                                   ['', 0], ['', 0], ['', 0]]
-        # [last seen header text in this level, number]
 
         # FIXME: merge this somehow with html.escape
         # prepare constants for s_safe_html_line()
@@ -152,21 +181,13 @@ class VimWiki2Html:
         #    s_lt_pattern = '\c<\%(/\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?>\)\@!'
         #    s_gt_pattern = '\c\%(</\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?\)\@<!>'
 
-        # prepare regexps for lists
-        s_bullets = ['-', '*', '#']
-        s_numbers = (r'('
-                     r'#|\d+\)|'
-                     r'\d+\.|'
-                     r'[ivxlcdm]+\)|'
-                     r'[IVXLCDM]+\)|'
-                     r'[a-z]{1,2}\)|'
-                     r'[A-Z]{1,2}\)'
-                     ')')
-
+        self._previus_line = None
         for line in lsource:
+            self._line_processed = False
             header = re_header.match(line)
             if header:
                 ldest.append(self._parse_header(header))
+                self._previus_line = line
                 continue
 
             if re_comment.match(line):
@@ -175,6 +196,7 @@ class VimWiki2Html:
 
             if re_hr.match(line):
                 ldest.append('<hr />')
+                self._previus_line = line
                 continue
 
             oldquote = self._state.quote
@@ -187,6 +209,7 @@ class VimWiki2Html:
                 remove_blank_lines(ldest)
 
             ldest.extend(lines)
+            self._previus_line = line
 
         remove_blank_lines(ldest)
 
@@ -197,7 +220,8 @@ class VimWiki2Html:
         close_arrow_quote(self._state.arrow_quote, lines)
         close_para(self._state.para, lines)
         close_math(self._state.math, lines)
-        s_close_tag_list(self._state.lists, lines)
+        # s_close_tag_list(self._state.lists, lines)
+        lines.extend(self._close_lists())
         close_def_list(self._state.deflist, lines)
         close_table(self._state.table, lines, self._state.header_ids)
         ldest.extend(lines)
@@ -251,40 +275,14 @@ class VimWiki2Html:
         ##    [processed, lines, self._state.table] = process_table(line, self._state.table, self._state.header_ids)
         ##    call extend(res_lines, lines)
 
+        # lists
+        lines = self._handle_list(line)
+        if self._line_processed:
+            res_lines.extend(lines)
+            return res_lines
 
-        ### lists
-        ##if !processed
-        ##    [processed, lines, self._state.list_leading_spaces] = s_process_tag_list(line, self._state.lists, self._state.list_leading_spaces)
-        ##    if processed && self._state.quote
-        ##        self._state.quote = close_precode(self._state.quote, lines)
-        ##    if processed && self._state.arrow_quote
-        ##        self._state.arrow_quote = close_arrow_quote(self._state.arrow_quote, lines)
-        ##    if processed && self._state.math[0]
-        ##        self._state.math = close_math(self._state.math, lines)
-        ##    if processed && len(self._state.table)
-        ##        self._state.table = close_table(self._state.table, lines, self._state.header_ids)
-        ##    if processed && self._state.deflist
-        ##        self._state.deflist = close_def_list(self._state.deflist, lines)
-        ##    if processed && self._state.para
-        ##        self._state.para = close_para(self._state.para, lines)
-
-        ##    call map(lines, 'process_inline_tags(v:val, self._state.header_ids)')
-
-        ##    call extend(res_lines, lines)
-
-
-        ### headers
-        ##if !processed
-        ##    [processed, line] = s_process_tag_h(line, self._state.header_ids)
-        ##    if processed
-        ##        call s_close_tag_list(self._state.lists, res_lines)
-        ##        self._state.table = close_table(self._state.table, res_lines, self._state.header_ids)
-        ##        self._state.math = close_math(self._state.math, res_lines)
-        ##        self._state.quote = close_precode(self._state.quote || self._state.arrow_quote, res_lines)
-        ##        self._state.arrow_quote = close_arrow_quote(self._state.arrow_quote, lines)
-        ##        self._state.para = close_para(self._state.para, res_lines)
-
-        ##        call add(res_lines, line)
+        if lines:
+            res_lines.extend(lines)
 
 
         ### quotes
@@ -337,24 +335,24 @@ class VimWiki2Html:
 
 
         #" P
-        if not processed:
-            processed, lines, self._state.para = s_process_tag_para(line, self._state.para)
-            if processed and len(self._state.lists):
-                s_close_tag_list(self._state.lists, lines)
-            if processed and (self._state.quote or self._state.arrow_quote):
-                self._state.quote = close_precode(True, lines)
-            if processed and self._state.arrow_quote:
-                self._state.arrow_quote = close_arrow_quote(self._state.arrow_quote,
-                                                            lines)
-            if processed and self._state.math[0]:
-                self._state.math = close_math(self._state.math, res_lines)
-            if processed and len(self._state.table):
-                self._state.table = close_table(self._state.table, res_lines,
-                                                self._state.header_ids)
+        processed, lines, self._state.para = s_process_tag_para(line, self._state.para)
+        #if processed and len(self._lists):
+        if processed and len(self._lists):
+            res_lines.extend(self._close_lists())
+        if processed and (self._state.quote or self._state.arrow_quote):
+            self._state.quote = close_precode(True, lines)
+        if processed and self._state.arrow_quote:
+            self._state.arrow_quote = close_arrow_quote(self._state.arrow_quote,
+                                                        lines)
+        if processed and self._state.math[0]:
+            self._state.math = close_math(self._state.math, res_lines)
+        if processed and len(self._state.table):
+            self._state.table = close_table(self._state.table, res_lines,
+                                            self._state.header_ids)
 
-            lines = [self._apply_attrs(x) for x in lines]
+        lines = [self._apply_attrs(x) for x in lines]
 
-            res_lines.extend(lines)
+        res_lines.extend(lines)
 
         # add the rest
         if not processed:
@@ -577,6 +575,111 @@ class VimWiki2Html:
             # argument?
             # TODO: support TZ for current date
             self.date = datetime.datetime.now().strftime('%Y-%m-%d')
+
+    def _handle_list(self, line):
+        """
+        Handle possible list item. Return html line(s) or untouched line.
+
+        Search for a pattern for a list item, or indented line which in case
+        of open any list opened.
+        """
+
+        def _new_list(indent, html_ltype, html_check, text):
+            self._lists.append(List(indent, html_ltype))
+            self._line_processed = True
+            return f"<{html_ltype}>\n<li{html_check}>\n{text}"
+
+        # prepare regexps for lists
+        bullets = ['-', '*', '#']
+
+        checkbox_defaults = {'-': 'rejected',
+                             ' ': 'done0',
+                             '.': 'done1',
+                             'o': 'done2',
+                             'O': 'done3',
+                             'X': 'done4'}
+
+        indent = list_type = checkbox = text = None
+        ret_lines = []
+
+        # empty, not indented line
+        if not line.strip() and len(line) == 0:
+            if self._lists:
+                self._line_processed = True
+                ret_lines.extend(self._close_lists())
+            else:
+                ret_lines.append(line)
+            return ret_lines
+
+        match = re_list.match(line)
+
+        if not match:
+            if not self._lists:
+                return
+            match = re_indented_text.match(line)
+            if not match:
+                return
+            indent, text = match.groups()
+        else:
+            indent, list_type, checkbox, text = match.groups()
+            html_ltype = 'ul' if list_type in bullets else 'ol'
+            html_check = ''
+            if checkbox in checkbox_defaults:
+                html_check = f' class="{checkbox_defaults[checkbox]}"'
+
+        if not list_type and len(line) and not self._previus_line.strip():
+            # close all lists
+            ret_lines.extend(self._close_lists())
+            self._line_processed = False
+            return ret_lines
+
+        if self._lists:
+            for _list in reversed(self._lists):
+                if len(indent) >= len(_list.indent):
+                    index = self._lists.index(_list)
+                    break
+            else:
+                ret_lines.extend(self._close_lists())
+                ret_lines.append(_new_list(indent, html_ltype, html_check,
+                                           text))
+                return ret_lines
+
+            if len(self._lists[index+1:]):
+                ret_lines.extend(self._close_lists(index=index))
+
+            if list_type:
+                if len(indent) > len(self._lists[-1].indent):
+                    self._lists.append(List(indent, html_ltype))
+                    ret_lines.append(f"<{html_ltype}>\n"
+                                     f"<li{html_check}>\n{text}")
+                else:
+                    ret_lines.append(f'</li>\n<li{html_check}>\n{text}')
+            else:
+                ret_lines.append(text)
+
+            self._line_processed = True
+            return ret_lines
+
+        # new list
+        ret_lines.append(_new_list(indent, html_ltype, html_check, text))
+        return ret_lines
+
+    def _close_lists(self, index=None):
+        """
+        Close selected lists started (not included) from index.
+        If index is not provided, close all lists
+        """
+        if not self._lists:
+            ret_lines = []
+        elif index is None:
+            ret_lines = [f"</li>\n</{o.list_type}>\n"
+                         for o in reversed(self._lists)]
+            self._lists = []
+        else:
+            ret_lines = [f"</li>\n</{o.list_type}>\n"
+                         for o in reversed(self._lists[index + 1:])]
+            self._lists = self._lists[:index + 1]
+        return ret_lines
 
     def _html_escape(self, line):
         line = line.replace('&', '&amp;')
@@ -1257,95 +1360,93 @@ def s_process_tag_list(line, lists, lstLeadingSpaces):
     # If it is not list yet then do not process line that starts from *bold*
     # text.
     # XXX necessary? in *bold* text, no space must follow the first *
-    if not in_list:
-        pos = match(line, '^\s*' + s_rxBold)
-        if pos != -1:
-            return [0, [], lstLeadingSpaces]
+    #if not in_list:
+    #    pos = match(line, '^\s*' + s_rxBold)
+    #    if pos != -1:
+    #        return [0, [], lstLeadingSpaces]
 
-    ##lines = []
-    ##processed = 0
-    ##checkboxRegExp = '\s*\[\(.\)\]\s*'
-    ##maybeCheckboxRegExp = '\%('.checkboxRegExp.'\)\?'
+    lines = []
+    processed = 0
+    checkboxRegExp = '\s*\[\(.\)\]\s*'
+    maybeCheckboxRegExp = '\%(' + checkboxRegExp + '\)\?'
 
-    ##if line =~# '^\s*'.s_bullets.'\s'
-    ##    lstSym = matchstr(line, s_bullets)
-    ##    lstTagOpen = '<ul>'
-    ##    lstTagClose = '</ul>'
-    ##    lstRegExp = '^\s*'.s_bullets.'\s'
-    ##elseif line =~# '^\s*'.s_numbers.'\s'
-    ##    lstSym = matchstr(line, s_numbers)
-    ##    lstTagOpen = '<ol>'
-    ##    lstTagClose = '</ol>'
-    ##    lstRegExp = '^\s*'.s_numbers.'\s'
-    ##else
-    ##    lstSym = ''
-    ##    lstTagOpen = ''
-    ##    lstTagClose = ''
-    ##    lstRegExp = ''
+    if line.strip()[0:1] in ['- ', '* ', '# ']:
+        lstSym = matchstr(line, s_bullets)
+        lstTagOpen = '<ul>'
+        lstTagClose = '</ul>'
+        lstRegExp = '^\s*' + s_bullets + '\s'
+    elif re_list_numbers.match(line.strip()[0:1]):
+    #elseif line =~# '^\s*'.s_numbers.'\s'
+        lstSym = matchstr(line, s_numbers)
+        lstTagOpen = '<ol>'
+        lstTagClose = '</ol>'
+        lstRegExp = '^\s*'+s_numbers+'\s'
+    else:
+        lstSym = ''
+        lstTagOpen = ''
+        lstTagClose = ''
+        lstRegExp = ''
 
-    ### If we're at the start of a list, figure out how many spaces indented we are so we can later
-    ### determine whether we're indented enough to be at the setart of a blockquote
-    ##if lstSym !=# ''
-    ##    lstLeadingSpaces = strlen(matchstr(line, lstRegExp.maybeCheckboxRegExp))
+    # If we're at the start of a list, figure out how many spaces indented we are so we can later
+    # determine whether we're indented enough to be at the setart of a blockquote
+    if lstSym:  # !=# ''
+        lstLeadingSpaces = strlen(matchstr(line, lstRegExp.maybeCheckboxRegExp))
 
-    ### Jump empty lines
-    ##if in_list && line =~# '^$'
-    ##    # Just Passing my way, do you mind ?
-    ##    [processed, lines, quote] = s_process_tag_precode(line, g:self._state.quote)
-    ##    processed = 1
-    ##    return [processed, lines, lstLeadingSpaces]
+    # Jump empty lines
+    if in_list and not line:  # =~# '^$'
+        # Just Passing my way, do you mind ?
+        #[processed, lines, quote] = s_process_tag_precode(line, g:self._state.quote)
+        processed = 1
+        return [processed, lines, lstLeadingSpaces]
 
-    ### Can embedded indented code in list (Issue #55)
-    ##b_permit = in_list
-    ##blockquoteRegExp = '^\s\{' . (lstLeadingSpaces + 2) . ',}[^[:space:]>*-]'
-    ##b_match = lstSym ==# '' && line =~# blockquoteRegExp
-    ##b_match = b_match || g:self._state.quote
-    ##if b_permit && b_match
-    ##    [processed, lines, g:self._state.quote] = s_process_tag_precode(line, g:self._state.quote)
-    ##    if processed == 1
-    ##        return [processed, lines, lstLeadingSpaces]
+    # Can embedded indented code in list (Issue #55)
+    b_permit = in_list
+    #blockquoteRegExp = '^\s\{' + (lstLeadingSpaces + 2) + ',}[^[:space:]>*-]'
+    #b_match = lstSym ==# '' && line =~# blockquoteRegExp
+    #b_match = b_match || g:self._state.quote
+    #if b_permit && b_match
+    #    [processed, lines, g:self._state.quote] = s_process_tag_precode(line, g:self._state.quote)
+    #    if processed == 1
+    #        return [processed, lines, lstLeadingSpaces]
 
-    ### New switch
-    ##if lstSym !=? ''
-    ##    # To get proper indent level 'retab' the line -- change all tabs
-    ##    # to spaces*tabstop
-    ##    line = substitute(line, '\t', repeat(' ', &tabstop), 'g')
-    ##    indent = stridx(line, lstSym)
+    # New switch
+    if lstSym:
+        # To get proper indent level 'retab' the line -- change all tabs
+        # to spaces*tabstop
+        line = substitute(line, '\t', repeat(' ', tabstop), 'g')
+        indent = stridx(line, lstSym)
 
-    ##    [st_tag, en_tag] = s_add_checkbox(line, lstRegExp.checkboxRegExp)
+        [st_tag, en_tag] = s_add_checkbox(line, lstRegExp.checkboxRegExp)
 
-    ##    if !in_list
-    ##        call add(lists, [lstTagClose, indent])
-    ##        call add(lines, lstTagOpen)
-    ##    elseif (in_list && indent > lists[-1][1])
-    ##        item = remove(lists, -1)
-    ##        call add(lines, item[0])
+        if not in_list:
+            add(lists, [lstTagClose, indent])
+            add(lines, lstTagOpen)
+        elif in_list and indent > lists[-1][1]:
+            item = remove(lists, -1)
+            add(lines, item[0])
 
-    ##        call add(lists, [lstTagClose, indent])
-    ##        call add(lines, lstTagOpen)
-    ##    elseif (in_list && indent < lists[-1][1])
-    ##        while len(lists) && indent < lists[-1][1]
-    ##            item = remove(lists, -1)
-    ##            call add(lines, item[0])
-    ##    elseif in_list
-    ##        item = remove(lists, -1)
-    ##        call add(lines, item[0])
+            add(lists, [lstTagClose, indent])
+            add(lines, lstTagOpen)
+        elif in_list and indent < lists[-1][1]:
+            while len(lists) and indent < lists[-1][1]:
+                item = remove(lists, -1)
+                add(lines, item[0])
+        elif in_list:
+            item = remove(lists, -1)
+            add(lines, item[0])
 
-    ##    call add(lists, [en_tag, indent])
-    ##    call add(lines, st_tag)
-    ##    call add(lines, substitute(line, lstRegExp.maybeCheckboxRegExp, '', ''))
-    ##    processed = 1
+        add(lists, [en_tag, indent])
+        add(lines, st_tag)
+        add(lines, substitute(line, lstRegExp.maybeCheckboxRegExp, '', ''))
+        processed = 1
 
-    ##elseif in_list && line =~# '^\s\+\S\+'
-    ##    if vimwiki#vars#get_wikilocal('list_ignore_newline')
-    ##        call add(lines, line)
-    ##    else
-    ##        call add(lines, '<br />'.line)
-    ##    processed = 1
+    elif in_list and line:  # =~# '^\s\+\S\+'
+        add(lines, line)
+        processed = 1
 
-    ### Close tag
-    ##else
-    ##    call s_close_tag_list(lists, lines)
+    # Close tag
+    else:
+        s_close_tag_list(lists, lines)
 
     return processed, lines, lstLeadingSpaces
 

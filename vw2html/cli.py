@@ -39,6 +39,7 @@ class VimWiki2HTMLConverter:
         self.configure(args)
 
     def configure(self, args):
+        # XXX: make support for reading some config file
         if os.path.isdir(args.source):
             self._wiki_path = self._root_path = os.path.abspath(args.source)
         else:

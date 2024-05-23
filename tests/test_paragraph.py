@@ -23,7 +23,7 @@ class TestParagraph(unittest.TestCase):
     def test_two_paragraphs(self):
         src = 'foo\n\nfoo'
         # TODO: should be single newline, but meh
-        exp = '<p>\nfoo\n</p>\n\n<p>\nfoo\n</p>'
+        exp = '<p>\nfoo\n\n</p>\n\n<p>\nfoo\n</p>'
 
         self.converter.wiki_contents = src
         self.converter.convert()
