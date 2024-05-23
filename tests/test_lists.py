@@ -96,3 +96,13 @@ class TestUL(unittest.TestCase):
         self.converter.wiki_contents = src
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
+
+    def test_single_list_separated_by_indent(self):
+        src = '2) foo\n1) bar\n   \n4) baz\n'
+        exp = ('<ol>\n<li>\nfoo\n</li>\n'
+               '<li>\nbar\n\n</li>\n'
+               '<li>\nbaz\n</li>\n</ol>\n')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)

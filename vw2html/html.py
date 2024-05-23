@@ -284,7 +284,6 @@ class VimWiki2Html:
         if lines:
             res_lines.extend(lines)
 
-
         ### quotes
         ##if !processed
         ##    [processed, lines, self._state.quote] = s_process_tag_precode(line, self._state.quote)
