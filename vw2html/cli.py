@@ -1,11 +1,12 @@
 import argparse
+import logging
 import os
-import sys
 import shutil
-import warnings
+import sys
 
 import vw2html
 
+LOG = logging.getLogger()
 
 class VimWiki2HTMLConverter:
     def __init__(self, args):
@@ -65,8 +66,8 @@ class VimWiki2HTMLConverter:
             try:
                 with open(html_obj.template) as fobj:
                     template = fobj.read()
-            except IOError:
-                print(f'Error loading template {html_obj.template}')
+            except OSError:
+                LOG.exception('Error loading template "%s"', html_obj.template)
 
         html = template.replace('%content%', html_obj.html)
         html = html.replace('%root_path%', root_path)
@@ -115,8 +116,8 @@ def _validate_output(path):
         if not os.path.isdir(path):
             msg = f"Path '{path}' and it's not a directory"
             raise argparse.ArgumentTypeError(msg)
-        warnings.warn(f'Path "{path} exists. Content might be removed and/or '
-                      f'overwritten.')
+        LOG.warning('Path "%s" exists. Content might be removed and/or '
+                    'overwritten.', path)
         try:
             test_fn = os.path.join(path, 'test.txt')
             with open(test_fn, 'w') as fobj:
@@ -150,6 +151,10 @@ def parse_args():
     parser.add_argument('-r', '--root', help="Root vimwiki directory")
     parser.add_argument('-t', '--template', help="Template file")
     parser.add_argument('-c', '--css', help="Stylesheet file")
+
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(filename)s:%(lineno)d: %(message)s')
+
     return parser.parse_args()
 
 
