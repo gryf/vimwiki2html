@@ -88,6 +88,9 @@ re_list = re.compile(r'^(\s*)([\*\-#]|[\d]+[\.\)])\s(?:\[([^]])\]\s?)?'
 re_indented_text = re.compile(r'^(\s+)(.*)$')
 # TODO(gryf): make tag list configurable
 re_safe_html = re.compile(r'<(\s*/*(?!(?:b|i|u|sub|sup|kbd|br|hr))\w.*?)>')
+re_bare_links = re.compile(r'(?<!\w)((?:http:|https:|ftp:|mailto:|www\.)/*[^\s]+)')
+re_wiki_links = re.compile(r'\[\[(?P<contents>[^]]+)\]\]')
+re_transclusion_links = re.compile(r'{{(?P<contents>[^}]+)}}')
 
 
 class VimWiki2Html:
@@ -97,6 +100,8 @@ class VimWiki2Html:
     max_header_level = 6
     codeblock_mark = "⛖⛖{}⛖⛖"
     inline_code_mark = "⛗⛗{}⛗⛗"
+    links_mark = "🔗🔗{}🔗🔗"
+    images_mark = "🖼🖼{}🖼🖼"
 
     template_ext = 'tpl'
 
@@ -117,6 +122,8 @@ class VimWiki2Html:
         self._title = None
         self._code_blocks = []
         self._inline_codes = []
+        self._links = []
+        self._images = []
         self._inline_codes_count = 0
         self._state = State()
         self._line_processed = False
@@ -136,6 +143,11 @@ class VimWiki2Html:
         for index, contents in enumerate(self._inline_codes):
             _html = _html.replace(self.inline_code_mark.format(index),
                                   contents)
+        for index, contents in enumerate(self._links):
+            _html = _html.replace(self.links_mark.format(index), contents)
+        for index, contents in enumerate(self._images):
+            _html = _html.replace(self.images_mark.format(index), contents)
+
 
         return _html
 
@@ -495,8 +507,8 @@ class VimWiki2Html:
         and code.
         """
         processed_line = line
-        for fn in (self._separate_inline_codes, self._parse_italic,
-                   self._parse_bold, self._parse_strikeout,
+        for fn in (self._separate_inline_codes, self._handle_links,
+                   self._parse_italic, self._parse_bold, self._parse_strikeout,
                    self._parse_superscript, self._parse_subscript):
             processed_line = fn(processed_line)
         return processed_line
@@ -556,7 +568,7 @@ class VimWiki2Html:
 
     def _remove_multiline_comments(self):
         """
-        Remove comments enclosed %%+ and +%% markings including markins as
+        Remove comments enclosed %%+ and +%% markings including markings as
         well.
         """
         self.wiki_contents = re_ml_comment.sub('', self.wiki_contents)
@@ -609,6 +621,116 @@ class VimWiki2Html:
             # TODO: support TZ for current date
             self.date = datetime.datetime.now().strftime('%Y-%m-%d')
 
+    def _handle_links(self, line):
+        # transclusions
+        for link in re_transclusion_links.finditer(line):
+            img = self._get_img_out_of_string(link.groupdict()['contents'])
+            line = re_transclusion_links.sub(self.images_mark
+                                             .format(len(self._images)),
+                                             line, count=1)
+            self._images.append(img)
+
+        # wiki links
+        for link in re_wiki_links.finditer(line):
+            link = self._get_link_out_of_string(link.groupdict()['contents'])
+            line = re_wiki_links.sub(self.links_mark.format(len(self._links)),
+                                     line, count=1)
+            self._links.append(link)
+
+        # bare links
+        for link in re_bare_links.finditer(line):
+            link = f'<a href="{link.groups()[0]}">{link.groups()[0]}</a>'
+            line = re_bare_links.sub(self.links_mark.format(len(self._links)),
+                                     line, count=1)
+            self._links.append(link)
+        return line
+
+    def _get_img_out_of_string(self, string):
+        parts = string.split('|')
+        if len(parts) == 3:
+            if parts[1]:
+                template = f'<img src="%s" alt="{parts[1]}" {parts[2]}/>'
+            else:
+                template = f'<img src="%s" {parts[2]}/>'
+        elif len(parts) == 2:
+            template = f'<img src="%s" alt="{parts[1]}"/>'
+        else:
+            template = '<img src="%s"/>'
+
+        dest = parts[0]
+
+        img = None
+        for schema in ('file:', 'local:'):
+            if str(dest).startswith(schema):
+                img = dest[len(schema):]
+                break
+        if img:
+            # skip dos nonsense
+            if not (img[0].isalpha() and img[1] == ':'):
+                if not os.path.isabs(img):
+                    img = os.path.join(self.root, img)
+            return template % os.path.abspath(img)
+
+        if dest.lower().startswith('http'):
+            return template % dest
+
+        raise ValueError(string)
+
+    def _get_link_out_of_string(self, string):
+        description = None
+        if '|' in string:
+            target, description = string.split('|', maxsplit=1)
+        else:
+            target = string
+        template = '<a href="%s">%s</a>'
+        if not description:
+            description = target
+
+        if target.startswith('diary:'):
+            return template % (f'diary/{target[6:]}.html', description)
+
+        for schema in ('http:', 'https:', 'ftp:', 'mailto:'):
+            if target.startswith(schema):
+                # plain url, just return it
+                return template % (target, description)
+
+        link = None
+        for schema in ('file:', 'local:'):
+            if target.startswith(schema):
+                link = target[len(schema):]
+                break
+        if link:
+            if not (link[0].isalpha() and link[1] == ':'
+                    and os.path.isabs(link)):
+                link = os.path.expandvars(os.path
+                                          .expanduser(os.path.join(self.root,
+                                                                   link)))
+            return template % (os.path.abspath(link), description)
+
+        # absolute links
+        if target.startswith('//'):
+            link = os.path.expanduser(os.path.expandvars(target[2:]))
+            if link.endswith('/'):
+                return template % (link, description)
+            return template % (link + '.html', description)
+
+        # relative links for wiki
+        if target.startswith('/'):
+            if target.endswith('/'):
+                return template % (f'{target[1:]}', description)
+            return template % (f'{target[1:]}.html', description)
+
+        # wiki links for directories
+        if target.endswith('/'):
+            return template % (target, description)
+
+        # wiki links for wiki pages
+        if not target.endswith('.html'):
+            link = f'{target}.html'
+            return template % (link, description)
+
+        raise ValueError(string)
+
     def _handle_list(self, line):
         """
         Handle possible list item. Return html line(s) or untouched line.
@@ -624,6 +746,14 @@ class VimWiki2Html:
 
         # prepare regexps for lists
         bullets = ['-', '*', '#']
+        numbers = (r'('
+                   r'\d+\)|'
+                   r'\d+\.|'
+                   r'[ivxlcdm]+\)|'
+                   r'[IVXLCDM]+\)|'
+                   r'[a-z]{1,2}\)|'
+                   r'[A-Z]{1,2}\)'
+                   ')')
 
         checkbox_defaults = {'-': 'rejected',
                              ' ': 'done0',
@@ -659,6 +789,8 @@ class VimWiki2Html:
             html_check = ''
             if checkbox in checkbox_defaults:
                 html_check = f' class="{checkbox_defaults[checkbox]}"'
+
+        text = self._apply_attrs(text)
 
         if not list_type and len(line) and not self._previus_line.strip():
             # close all lists
@@ -722,7 +854,7 @@ class VimWiki2Html:
 
 
 # text: $ equation_inline $
-s_rxEqIn = '\$[^$`]\+\$'
+#s_rxEqIn = '\$[^$`]\+\$'
 
 # match all the tags in the wiki and replace them, besides defined, simple ones
 #re_safe_html = re.compile(r'<(\s*/*[^b,i,s,u,sub,sup,kbd,br,hr]*?)>')
@@ -758,13 +890,11 @@ def s_is_img_link(lnk):
 
 
 def safe_html_preformatted(line):
-    line = line.replace('<', '\&lt;')
-    line = line.replace('>', '\&gt;')
-    return line
+    return line.replace('<', '&lt;').replace('>', '&gt;')
 
 
 def s_escape_html_attribute(string):
-    return string.replace('"', '\&quot;')
+    return string.replace('"', '&quot;')
 
 
 def s_safe_html_line(line):
@@ -772,9 +902,7 @@ def s_safe_html_line(line):
     escape & < > when producing HTML text using g:vimwiki_valid_html_tags for
     exepctions
     """
-    line = re_safe_html.sub('&lt;\\1&gt;', line)
-    line = line.replace('&', '\&amp;')
-    return line
+    return re_safe_html.sub('&lt;\\1&gt;', line).replace('&', '&amp;')
 
 
 def s_mid(value, cnt):

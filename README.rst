@@ -44,10 +44,16 @@ What's supported:
   - Plainhtml (this one is undocumented, and allows to add explicit html tags
     which follows that placeholder. It's inline only, which means no span on
     multiple lines, although this placeholder can be repeated several times)
+- Links
+  - Diary
+  - wikilinks (absolute/relative/plain/anchors)
+  - external links (local/remote)
+  - transclusion links (or, image tags, as no other are supported on vimwiki)
+  - raw links (or bare)
 
 What's not:
 
-- Links
+- Links: interwiki links
 - Lists. Note, that html parser from VimWiki produce invalid item lists - no
   closing item tags for both kind of the lists.
 
@@ -87,7 +93,6 @@ What's not:
 - Mathematical formulae (both - inline and block)
 - Blockquotes
 - Tags
-
 - Explicit html tags (default list is ``b``, ``i``, ``s``, ``u``, ``sub``,
   ``sup``, ``kbd``, ``br`` and ``hr``.
 - Escape HTML tags but the one excluded

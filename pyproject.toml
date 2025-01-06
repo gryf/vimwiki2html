@@ -45,5 +45,5 @@ universal = true
 
 [tool.ruff.lint]
 select = ["ALL", 'E']
-ignore = ["Q", "ANN", "D", "PTH", "PT"]
+ignore = ["Q", "ANN", "D", "PTH", "PT", "TD003", "FIX001", "FIX002", "ERA001"]
 #ignore = ["Q", "COM812", "ANN", "D", "PTH"]
