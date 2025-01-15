@@ -31,9 +31,6 @@ Homepage = "https://github.com/gryf/vimwiki2html"
 [project.scripts]
 vw2html = "vw2html.cli:main"
 
-#[tool.setuptools]
-#py-modules = ["vw2html"]
-
 [tool.setuptools]
 packages = ["vw2html"]
 

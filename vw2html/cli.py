@@ -1,15 +1,44 @@
 import argparse
+import dataclasses
 import logging
 import os
 import shutil
 import sys
+import tomllib
 
 import vw2html
 
 LOG = logging.getLogger()
+XDG_CONFIG_HOME = os.getenv('XDG_CONFIG_HOME',
+                                os.path.expanduser('~/.config'))
+CONF_PATH = os.path.join(XDG_CONFIG_HOME, 'vw2html.toml')
+
+
+@dataclasses.dataclass
+class VWConfig:
+    root: str = None
+    template: str = None
+    css: str = None
+
+
+def abspath(path):
+    return os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
+
+
+def read_conf():
+    try:
+        with open(CONF_PATH, "rb") as fobj:
+            toml = tomllib.load(fobj)
+    except (OSError, ValueError):
+        LOG.exception("Exception on reading config file %s, ignoring", CONF_PATH)
+        return VWConfig()
+
+    return VWConfig(**toml)
+
 
 class VimWiki2HTMLConverter:
     def __init__(self, args):
+        self._conf = read_conf()
         # Template to put contents in. If not provided by the commandline,
         # this is the default
         # template fields:
@@ -23,41 +52,56 @@ class VimWiki2HTMLConverter:
                           "<body>%content%</body></html>")
         # root path for the root of the wiki, potentially used in templates,
         # and is set if provided source is a directory
-        # XXX: do I need this?
-        self._root_path = ''
-        # CSS file to be copied/added to the output direcotry. Should be
+        self._root = ''
+        # CSS file to be copied/added to the output directory. Should be
         # coherent with the template
-        self._css_fname = None
-        # Source direcotry, aka wiki direcotry, where all wiki/media files are
+        self._css = None
+        # Source directory, aka wiki directory, where all wiki/media files are
         # located.
         self._wiki_path = None
         # Source file. It may happen, that user want to convert only single
         # file - this is where it is stored internally.
         self._wiki_filepath = None
-        # Output direcotry for the html/css/content files
+        # Output directory for the html/css/content files
         self._www_path = None
 
         self.configure(args)
 
     def configure(self, args):
-        # XXX: make support for reading some config file
+        self._root = args.root if args.root else self._conf.root
+        if self._root:
+            self._root = abspath(self._root)
+        template = args.template if args.template else self._conf.template
+        if template:
+            template = abspath(template)
+        self._css = args.css if args.css else self._conf.css
+        if self._css:
+            self._css = abspath(self._css)
+
         if os.path.isdir(args.source):
-            self._wiki_path = self._root_path = os.path.abspath(args.source)
-        else:
-            self._wiki_filepath = os.path.abspath(args.source)
-            if args.root:
-                self._root_path = os.path.abspath(args.root)
-            else:
-                self._root_path = os.path.abspath(os.path.dirname(args.source))
+            self._wiki_path = abspath(args.source)
+            # calculate root path with directory
+            if not self._root:
+                self._root = self._wiki_path
 
-        self._www_path = args.output
+        if not template and self._root:
+            template = os.path.join(self._root, 'default.tpl')
+            if not os.path.exists(template):
+                template = None
 
-        if args.template:
-            with open(args.template) as fobj:
+        if template:
+            with open(template) as fobj:
                 self._template = fobj.read()
 
-        if args.css:
-            self._css_fname = args.css
+        if not self._css and self._root:
+            self._css = os.path.join(self._root, 'style.css')
+
+        if not os.path.isdir(args.source):
+            self._wiki_filepath = abspath(args.source)
+            if not self._root:
+                self._root = abspath(os.path.dirname(args.source))
+
+        self._www_path = abspath(args.output)
 
     def _apply_data_to_template(self, html_obj):
         root_path = '../'.join(['' for _ in range(html_obj.level)])
@@ -77,27 +121,26 @@ class VimWiki2HTMLConverter:
 
     def convert(self):
         # copy css file
-        if self._css_fname:
-            fulldname = os.path.abspath(os.path.dirname(self._css_fname))
+        if self._css:
+            fulldname = os.path.abspath(os.path.dirname(self._css))
             dst = self._www_path
-            if fulldname != self._root_path:
-                dname = fulldname.replace(self._root_path)[1:]
+            if fulldname != self._root:
+                dname = fulldname.replace(self._root)[1:]
                 os.makedirs(self._www_path, dname)
                 dst = os.path.join(self._www_path, dname)
-            shutil.copy(self._css_fname, dst)
+            shutil.copy(self._css, dst)
 
         if self._wiki_filepath:
             data = [vw2html.html.convert_file(self._wiki_filepath,
-                                              self._www_path,
-                                              self._root_path)]
+                                              self._www_path, self._root)]
         else:
             data = []
-            for root, dirs, files in os.walk(self._wiki_path):
+            for root, _, files in os.walk(self._wiki_path):
                 for fname in files:
                     data.append(vw2html.html.
                                 convert_file(os.path.join(root, fname),
                                              self._www_path,
-                                             self._root_path))
+                                             self._root))
 
         for obj in data:
             with open(obj.html_fname, 'w') as fobj:

@@ -15,6 +15,26 @@ Installation
 
 TBD
 
+Usage
+-----
+
+Just install package via pip in virtualenv, and use the ``vw2html`` command to
+convert selected file or directory.
+
+You might also use configuration file for tweaking program behaviour. For
+example:
+
+.. code:: toml
+
+   # Note: relative path is counted using config file, so it's better to stick
+   # with absolute one
+   root = "relative or absolute path to the vimwiki root path"
+   # Note: relative path will need to have passed wiki-root somehow
+   template = "relative or absolute path to the default template file"
+   css = "relative or absolute path to the css stylesheet"
+
+change with desired values and write under ``$XDG_CONFIG_HOME/vw2html.toml``.
+
 Conversion state
 ----------------
 
@@ -47,23 +67,32 @@ What's supported:
 - Links
   - Diary
   - wikilinks (absolute/relative/plain/anchors)
-  - external links (local/remote)
+  - external links (local/remote/bare)
   - transclusion links (or, image tags, as no other are supported on vimwiki)
+    even those which have no schema (VimWiki docs doesn't mention those, yet
+    it's simply working)
   - raw links (or bare)
 
 What's not:
 
-- Links: interwiki links
-- Lists. Note, that html parser from VimWiki produce invalid item lists - no
-  closing item tags for both kind of the lists.
+- Links:
+
+  - interwiki links
+  - wiki and local links are messed up at the moment, all of them are at the
+    same level (i.e. *root* level, TBD)
+
+- Lists:
 
   - which start with roman number (i.e. ``i``, ``x``, ``mc``, ``I``, ``X``,
     ``MC``)
   - which start with letters (i.e. ``a``, ``b``, ``z``, ``A``, ``B``, ``Z``)
-  - in VimWiki providing indented items and subsequent dedented items like:
-    
-    .. code:: 
-       
+  - VimWiki parser produce invalid item lists - no closing item tags for both
+    kind of the lists (<ul> and <ol>).
+  - With the list defined like below (overindented lists, and another dedented
+    list):
+
+    .. code::
+
        paragraph
 
          * some list item (which is inednted)
@@ -71,21 +100,21 @@ What's not:
 
        * another list
 
-    will generate two lists, or rather list and a dangling item in a <li> tag.
-    This vimwiki2html, parser will generate two lists properly on the same
-    level.
+    VimWiki parser will generate two lists, or rather list and a dangling item
+    in a <li> tag. OTOH in such case vimwiki2html will generate two lists
+    properly on the same level - output may differ visually.
 
   - interpretation of items like:
- 
-    .. code:: 
-       
+
+    .. code::
+
        paragraph
 
        * some list item
        * another item
 
        * last item
-   
+
     will produce two separate lists, not like in VimWiki html parser single
     list with second item having swallowed empty line.
 
