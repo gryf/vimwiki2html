@@ -1,0 +1,67 @@
+= Lists =
+
+== Unordered list with single item ==
+
+* foo
+
+== Three element unordered list ==
+
+- foo
+- bar
+- baz
+
+== Unordered nested list ==
+
+# foo
+ # bar
+# baz
+
+== Unordered even more nested list ==
+
+# foo
+ # bar
+   another line for second level
+  # baz
+# meh
+
+== TODO list ==
+
+* [ ] foo
+* [.] bar
+
+== TODO nested list ==
+
+* [O] foo
+  * [o] bar
+    * [X] subar
+      * [X] subsubar
+    * [X] second subar
+    * [ ] third subar
+  * [X] baz
+    * [X] meh
+        * [.] meh²
+
+== TODO invalid list ==
+
+* [ ] foo 
+* [z] zonk
+
+== Two separate lists (wrongly rendered by VimWiki engine) ==
+
+1) foo
+
+1) bar
+
+== Two indented lists (wrongly rendered by VimWiki engine) ==
+
+meh
+
+  3. foo
+1. bar
+
+== Single list separated by indent (wrongly rendered by VimWiki engine) ==
+
+2) foo
+1) bar
+   
+4) baz

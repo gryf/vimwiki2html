@@ -1,0 +1,20 @@
+= Paragraphs =
+
+= Single paragraph =
+
+foo
+
+= Two paragraphs =
+
+foo
+
+bar
+
+= Two paragraph with several linebrakes =
+
+Mi, dictum id, convallis ac, mattis non, nibh. Donec sagittis quam eu mauris.
+Phasellus et leo at quam dapibus pellentesque. In non lacus. Nullam tristique
+nunc ut arcu scelerisque aliquam.
+
+Phasellus ipsum odio, suscipit nec, fringilla at, vehicula quis, tellus.
+Phasellus gravida condimentum dui.

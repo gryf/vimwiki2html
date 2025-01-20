@@ -1,0 +1,11 @@
+= test vimwiki =
+
+- [[headers]]
+- [[code]]
+- [[hr|horizontal rule]]
+- [[paragraph]]
+- [[attributes]]
+- [[misc]]
+- [[lists]]
+- [[links]]
+- tables

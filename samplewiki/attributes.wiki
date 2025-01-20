@@ -1,0 +1,25 @@
+= Attributes =
+
+- *test bold*
+- Nullam **double bold** ante.
+- Nullam * no bold on space after opening asterisk* ante.
+- Nullam *no bold on space before closing asterisk *ante.
+- bold_followed_by_nobold_with_non_whitespace:
+  - Nullam *adip*!iscing *uada*ante.
+- double bold extra asterisk: males *uada *venen *atis
+- _italic_
+- test double italic: text _italic_ text _italic_ again text
+- test double italic extra underscore: text _italic_ text _italic_ again_ 
+- _*italicbold*_
+- *_bolditalic_*
+- *_bold* and italic_ *text
+- ~~strikeout~~
+- ~~ strike~out ~~
+- ~~strike out~~ and ~~ again~~ text ~
+- ~~*bold* and crossed out~~ *text~~
+- *bold _italic ~~strikeout~~ no crosed* not bold_ nor italic.
+- square^2^
+- square^^2^^
+- meh,,2,,
+- meh ,, 2 ,,
+- subscript not working that way: meh ,,,,

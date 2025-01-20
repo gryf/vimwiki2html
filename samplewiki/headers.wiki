@@ -1,0 +1,16 @@
+= headers =
+
+=new\n
+line=
+
+===    extraspace ===
+
+====== title level 6======
+
+== ti==tle ==
+
+======= title level 7 =======
+
+===== unbalanced equal sign ====
+
+== header with _italic_ *bold* ~~and crossed~~ ==

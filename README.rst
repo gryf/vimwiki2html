@@ -28,12 +28,30 @@ example:
 
    # Note: relative path is counted using config file, so it's better to stick
    # with absolute one
-   root = "relative or absolute path to the vimwiki root path"
+   path = "relative or absolute path to the vimwiki root path"
    # Note: relative path will need to have passed wiki-root somehow
-   template = "relative or absolute path to the default template file"
-   css = "relative or absolute path to the css stylesheet"
+   template_default = "relative or absolute path to the default template file"
+   css_name = "relative or absolute path to the css stylesheet"
+   path_html = ''
+   # Main file. Usually index. If no other index is found, it will be renamed
+   # to index anyway.
+   index = 'index'
+   # Extension for wiki files
+   ext = '.wiki'
+   # Path to templates. If not specified, will be deducted from the wiki path
+   # and defaults to 'templates' directory within
+   template_path = None  # '~/vimwiki/templates/'
+   # Default template without extension.
+   template_default = 'default'
+   # Default template extension.
+   template_ext = '.tpl'
 
 change with desired values and write under ``$XDG_CONFIG_HOME/vw2html.toml``.
+
+As for css file, there is default one which comes with VimWiki and is located
+in `vimwiki/autoload/vimwiki/style.css` although due to different way and
+locations of installing vim plugins, it will be specifically set either in
+config file, or passed to the ``vw2html`` command via ``-s`` parameter.
 
 Conversion state
 ----------------

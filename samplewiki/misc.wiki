@@ -1,0 +1,48 @@
+= Misc =
+
+== Test comment ==
+
+(should be nothing below)
+
+%% this is a comment
+  %% even space before '%%' should be treated as comment
+
+athough, if put something before %% it will should not be treaded as a comment.
+
+== Multiline comments ==
+
+Pharetra  rhoncus *massa. %%+Cras et* ligula vel quam
+tristique commodo. Sed est lectus, mollis quis, lacinia nec,
+
++%%Vestibulum _ante `ipsum primis %%+in_ faucibus` orci
+luctus et ultrices posuere cubilia Curae;
+Morbi urna dui,
+fermentum quis, feugiat imperdiet, imperdiet id, +%%sapien.
+
+only this single paragraph should be visible:
+
+Pharetra  rhoncus *massa. Vestibulum _ante `ipsum primis sapien.
+
+== Placeholders ==
+
+`%title` will set page title to „My great Title”
+
+%title    My great Title!
+
+`%template` placeholder set to some existing template will make this page
+styleless with additional footer with date.
+%template custom
+
+`%date` placeholder can be set to whatever. Check out the bottom of the page for Orwell.
+%date 1984-06-08
+
+`%plainhtml` - let's do some real code!
+
+%plainhtml <i style="font-size: 5em">font size 5em</i>
+%plainhtml <div style="background-color: LightSteelBlue; display: block; margin: auto; width: 20em; text-align: center">
+meh
+%plainhtml <b style="background-color: cornsilk; color: darkred">bar</b>
+%plainhtml </div>
+
+`%nohtml` prevent from content of page containing such placeholder from 
+conversion to html. This page: [[nohtml]] will not be converted.

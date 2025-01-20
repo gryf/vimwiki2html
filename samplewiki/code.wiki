@@ -1,0 +1,40 @@
+= Code =
+
+== Code blocks ==
+
+{{{
+plain code
+}}}
+
+{{{type=py
+# with additional argument "type=py"
+print("meh")
+}}}
+
+{{{
+   multiline_pre_indent
+      }}}
+
+{{{
+multiline_pre_containing_closing
+}}}x
+}}}
+
+{{{
+multiline_pre_containing_closing2
+x }}}
+}}}
+
+foo {{{
+multiline_pre_invalid_opening
+}}}
+
+== Inline code ==
+
+- `just a code`
+- `multiple` codes in `one line`
+- `foo`, `bar`
+  and `baz` not sure what's the test here
+- invalid second code: `foo` and ```
+- css color codes. Greenish: `#00FF88` orange: `#ff8800`, white: `#ffffff`, 
+  black: `#000000`

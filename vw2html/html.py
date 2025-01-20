@@ -4,6 +4,7 @@ This is kind of translation from vimwiki html export file to python
 import dataclasses
 import datetime
 import html
+import logging
 import os
 import re
 import sys
@@ -15,6 +16,9 @@ try:
     import pygments.util
 except ImportError:
     pygments = None
+
+
+LOG = logging.getLogger()
 
 
 @dataclasses.dataclass
@@ -90,8 +94,11 @@ re_indented_text = re.compile(r'^(\s+)(.*)$')
 re_safe_html = re.compile(r'<(\s*/*(?!(?:b|i|u|sub|sup|kbd|br|hr))\w.*?)>')
 re_bare_links = re.compile(r'(?<!\w)((?:http:|https:|ftp:|mailto:|www\.)/*[^\s]+)')
 re_wiki_links = re.compile(r'\[\[(?P<contents>[^]]+)\]\]')
-re_transclusion_links = re.compile(r'{{(?P<contents>[^}]+)}}')
-
+re_transclusion_links = re.compile(r'(?<!{){{(?P<contents>[^}]+)}}(?!})')
+re_bare_links = re.compile(r'(?<!\w)((?:http:|https:|ftp:|mailto:|www\.)/*[^\s]+)')
+re_html_links = re.compile(r'\[\[(?P<contents>'
+                           r'(?:http:|https:|ftp:|mailto:|www\.)?'
+                           r'[^]]*)\]\]')
 
 class VimWiki2Html:
     """
@@ -106,6 +113,9 @@ class VimWiki2Html:
     template_ext = 'tpl'
 
     def __init__(self, wikifname, output_dir, root):
+        self._rel_root = os.path.relpath(root, os.path.dirname(wikifname))
+        self._rel_wiki_filepath = os.path.relpath(wikifname, root)
+
         self.level = 1
         self.root = root
         self.template = None
@@ -115,10 +125,15 @@ class VimWiki2Html:
         self._html = ''
         self.wiki_fname = wikifname
         self.output_dir = output_dir
+        # TODO: There is subdirectory lost. Correlate it with rel_root and
+        # wiki root.
         self.html_fname = os.path.join(output_dir, os.path
                                        .splitext(os.path
                                                  .basename(wikifname))[0] +
                                        '.html')
+
+        if 'index' in wikifname:
+            __import__('pdb').set_trace()
         self._title = None
         self._code_blocks = []
         self._inline_codes = []
@@ -160,8 +175,7 @@ class VimWiki2Html:
         self.read_wiki_file(self.wiki_fname)
         # exit early if there is %nohtml placeholder
         if self.nohtml:
-            sys.stderr.write(f'Error: no content found for '
-                             f'{self.wiki_fname}\n')
+            LOG.warning(f'Error: no content found for {self.wiki_fname}')
             return
 
         # do global substitution and removal - remove multiline comments and
@@ -483,13 +497,13 @@ class VimWiki2Html:
         open_level = open_level.strip()
         close_level = close_level.strip()
         if open_level != close_level:
-            sys.stderr.write(f"Header open level doesn't match close level: "
-                             f"'{open_level}' vs '{close_level}'")
+            LOG.warning(f"Header open level doesn't match close level: "
+                        f"'{open_level}' vs '{close_level}'.")
             return line_match.string
         level = len(open_level)
         if level > self.max_header_level:
-            sys.stderr.write(f"Warning: Headers cannot exceed "
-                             f"{self.max_header_level} level\n")
+            LOG.warning(f"Warning: Headers cannot exceed "
+                        f"{self.max_header_level} level.")
             return line_match.string
 
         title = _id = line_match["title"].strip()
@@ -592,7 +606,10 @@ class VimWiki2Html:
         The argument for the %template placeholder should be name of the file
         without a path (root of the vimwiki) and extension (.tpl by defult).
         For now it's calculated using self.root as the vimwiki root directory.
+
         """
+        # TODO: change that to use configured template path instead of src
+        #       wiki root.
         result = re_ph_template.search(self.wiki_contents)
 
         if not result:
@@ -629,10 +646,22 @@ class VimWiki2Html:
                                              .format(len(self._images)),
                                              line, count=1)
             self._images.append(img)
+        # wiki links
+        for link in re_html_links.finditer(line):
+            try:
+                link = self._get_link_out_of_string(link.groupdict()['contents'])
+            except:
+                raise
+            line = re_html_links.sub(self.links_mark.format(len(self._links)),
+                                     line, count=1)
+            self._links.append(link)
 
         # wiki links
         for link in re_wiki_links.finditer(line):
-            link = self._get_link_out_of_string(link.groupdict()['contents'])
+            try:
+                link = self._get_link_out_of_string(link.groupdict()['contents'])
+            except:
+                raise
             line = re_wiki_links.sub(self.links_mark.format(len(self._links)),
                                      line, count=1)
             self._links.append(link)
@@ -668,13 +697,16 @@ class VimWiki2Html:
             # skip dos nonsense
             if not (img[0].isalpha() and img[1] == ':'):
                 if not os.path.isabs(img):
+                    # TODO: make images point to the copies inside output
+                    # directory
                     img = os.path.join(self.root, img)
             return template % os.path.abspath(img)
 
         if dest.lower().startswith('http'):
             return template % dest
 
-        raise ValueError(string)
+        LOG.warning('Image "%s" have no schema', dest)
+        return template % dest
 
     def _get_link_out_of_string(self, string):
         description = None
@@ -702,6 +734,7 @@ class VimWiki2Html:
         if link:
             if not (link[0].isalpha() and link[1] == ':'
                     and os.path.isabs(link)):
+                # TODO: use relative link path translated from the src
                 link = os.path.expandvars(os.path
                                           .expanduser(os.path.join(self.root,
                                                                    link)))
@@ -727,6 +760,10 @@ class VimWiki2Html:
         # wiki links for wiki pages
         if not target.endswith('.html'):
             link = f'{target}.html'
+            return template % (link, description)
+
+        # bare html links without schema. assuming remote links.
+        if target.endswith('.html'):
             return template % (link, description)
 
         raise ValueError(string)

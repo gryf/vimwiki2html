@@ -1,0 +1,6 @@
+%nohtml
+
+This file will not be converted to html
+
+- lorem
+- ipsum

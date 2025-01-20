@@ -1,0 +1,25 @@
+= Horizontal rules =
+
+legal one, 4 dashes:
+
+----
+
+more than 4 dashes:
+
+--------------------
+
+trailing space:
+
+----- 
+
+leading space:
+
+ -----
+
+extra characters:
+
+-----foo
+
+not enough hypens:
+
+---
