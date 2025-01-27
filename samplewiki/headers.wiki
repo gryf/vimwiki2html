@@ -1,16 +1,30 @@
 = headers =
 
-=new\n
+header with line break (shouldn't render):
+
+=new
 line=
+
+header with extra space in title break (should render):
 
 ===    extraspace ===
 
-====== title level 6======
+header level 6 without space around text (should render):
+
+======title level 6======
+
+header with extra equal signs inside (should render):
 
 == ti==tle ==
 
+header level 7 - illegal on html (shouldn't render):
+
 ======= title level 7 =======
 
+header with unbalanced number of equal signs (shouldn't render):
+
 ===== unbalanced equal sign ====
+
+header with attributes (italic, bold and crossed out) (should render):
 
 == header with _italic_ *bold* ~~and crossed~~ ==

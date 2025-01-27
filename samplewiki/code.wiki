@@ -2,39 +2,77 @@
 
 == Code blocks ==
 
-{{{
-plain code
-}}}
+- plain code :
+  {{{
+Nisl. Pellentesque porta augue in diam. Duis mattis. Aliquam et mi quis turpis
+pellentesque consequat. Suspendisse nulla erat, lacinia nec, pretium vitae,
+feugiat ac, quam. Etiam sed tellus vel est ultrices condimentum. Vestibulum
+euismod. Vivamus blandit. Pellentesque eu urna. Vestibulum consequat sem vitae
+dui. In dictum feugiat quam. Phasellus placerat. In sem nisl, elementum vitae,
+venenatis nec, lacinia ac, arcu. Pellentesque gravida egestas mi. Integer
+rutrum tincidunt libero.
 
-{{{type=py
-# with additional argument "type=py"
-print("meh")
+Duis viverra. Nulla diam lectus, tincidunt et, scelerisque vitae, aliquam
+vitae, justo. Quisque eget erat. Donec aliquet porta magna. Sed nisl. Ut
+tellus. Suspendisse quis mi eget dolor sagittis tristique. Aenean non pede
+eget.
 }}}
+- Code with syntax highlight (here: python code indicated as `{{{type=py`):
+  {{{type=py
+from flask import Flask
+app = Flask(__name__)
 
+@app.route("/"):
+def hello():
+    return "Hello World!"
+
+@app.route("/answer"):
+def hello():
+    # for the ultimate question
+    return 42
+
+if __name__ == "__main__":
+    app.run()
+}}}
+- code with several withespace around text (manually centered)
 {{{
-   multiline_pre_indent
+            Ac elit. Nullam tincidunt ligula vitae nulla.
+         Vivamus sit amet risus et ipsum viverra malesuada.
+              Vestibulum tortor. Pellentesque purus.
+             Aliquam nec felis eu sem euismod viverra.
+     Suspendisse felis mi, dictum id, convallis ac, mattis non, nibh.
       }}}
 
-{{{
-multiline_pre_containing_closing
+- Multiline containing character at closing (which shouldn't be treaded as
+  closing and should be included in code as a last `}}}x` entry):
+  {{{
+        Facilisis non, tincidunt at, enim.
+Vestibulum ante ipsum primis in faucibus orci luctus
+et ultrices posuere cubilia Curae; Duis imperdiet
+eleifend arcu.
 }}}x
 }}}
-
-{{{
-multiline_pre_containing_closing2
+- Similar to above but with the character before closing sequence (`x }}}`:
+  {{{
+Lorem ipsum dolor sit amet. Integer sed magna. Duis nisl nulla, porta ut,
+molestie sit amet, tincidunt eu, enim. Cras eu mauris. Cras iaculis, nisi vel
+tempor fringilla, nisl dolor imperdiet dolor, id lobortis ligula nunc sed
+dolor.
 x }}}
 }}}
-
+- Any character but the whitespace, preceding opening block code will create 
+  simple paragraph not the code block:
 foo {{{
-multiline_pre_invalid_opening
+Cursus posuere. Morbi bibendum facilisis eros. Phasellus aliquam sapien in 
+erat. Praesent venenatis diam dignissim dui. Praesent risus erat, iaculis ac, 
+dapibus sed, imperdiet ac, erat. Nullam sed ipsum. Phasellus non dolor. Donec 
+ut elit.
 }}}
 
 == Inline code ==
 
-- `just a code`
-- `multiple` codes in `one line`
-- `foo`, `bar`
-  and `baz` not sure what's the test here
-- invalid second code: `foo` and ```
-- css color codes. Greenish: `#00FF88` orange: `#ff8800`, white: `#ffffff`, 
-  black: `#000000`
+- Simple command: `ls -la`
+- Several commands `ls -la` in one line `cp foo /tmp`
+- invalid second code: `the good one` and the bad: ```
+- CSS color codes. Greenish: `#00FF88` orange: `#ff8800`, white: `#ffffff`,
+  bluish: `#80c0f0`

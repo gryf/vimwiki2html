@@ -21,7 +21,7 @@
 # foo
  # bar
    another line for second level
-  # baz
+  # a little bit off indentation, but still level 3
 # meh
 
 == TODO list ==
