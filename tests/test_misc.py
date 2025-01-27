@@ -8,8 +8,8 @@ from vw2html.html import VimWiki2Html
 class TestComments(unittest.TestCase):
 
     def setUp(self):
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
-                                      '/tmp/src')
+        conf = mock.MagicMock()
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', conf)
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 
@@ -45,7 +45,7 @@ class TestComments(unittest.TestCase):
                'Morbi urna dui, \nfermentum quis, feugiat imperdiet, '
                'imperdiet id, +%%sapien.  \n')
         exp = ('<p>\nPharetra  rhoncus *massa. Vestibulum _ante `ipsum primis'
-               ' sapien.  \n\n</p>')
+               ' sapien.  \n</p>')
 
         self.converter.wiki_contents = src
         self.converter.convert()
@@ -55,8 +55,8 @@ class TestComments(unittest.TestCase):
 class TestTitlePlaceholder(unittest.TestCase):
 
     def setUp(self):
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
-                                      '/tmp/src')
+        conf = mock.MagicMock()
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', conf)
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 
@@ -95,8 +95,8 @@ class TestNoHtmlPlaceholder(unittest.TestCase):
 
     def setUp(self):
         # don't read any file
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
-                                      '/tmp/src')
+        conf = mock.MagicMock()
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', conf)
 
     def test_nohtml_set(self):
         src = '%nohtml'
@@ -119,8 +119,10 @@ class TestTemplatePlaceholder(unittest.TestCase):
 
     def setUp(self):
         # don't read any file
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
-                                      '/tmp/src')
+        conf = mock.MagicMock()
+        conf.template_path = '/tmp/src/tmplts'
+        conf.template_ext = '.jinja'
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', conf)
 
     def test_template_without_arg(self):
         src = '%template'
@@ -144,15 +146,15 @@ class TestTemplatePlaceholder(unittest.TestCase):
         mock_open = mock.mock_open(read_data=src)
         with mock.patch("builtins.open", mock_open):
             self.converter.convert()
-        self.assertEqual(self.converter.template, '/tmp/src/bar.tpl')
+        self.assertEqual(self.converter.template, '/tmp/src/tmplts/bar.jinja')
 
 
 class TestDatePlaceholder(unittest.TestCase):
 
     def setUp(self):
         # don't read any file
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
-                                      '/tmp/src')
+        conf = mock.MagicMock()
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', conf)
 
     def test_no_date(self):
         src = 'date'
@@ -184,8 +186,8 @@ class TestPlainHTMLPlaceholder(unittest.TestCase):
 
     def setUp(self):
         # don't read any file
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
-                                      '/tmp/src')
+        conf = mock.MagicMock()
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', conf)
 
     def test_no_placeholder(self):
         src = 'foo'

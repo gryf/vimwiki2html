@@ -6,8 +6,8 @@ from vw2html.html import VimWiki2Html
 
 class TestUL(unittest.TestCase):
     def setUp(self):
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
-                                      '/tmp/src')
+        conf = mock.MagicMock()
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', conf)
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 
@@ -90,7 +90,7 @@ class TestUL(unittest.TestCase):
 
     def test_two_indented_lists(self):
         src = 'meh\n\n  3. foo\n1. bar\n'
-        exp = ('<p>\nmeh\n\n</p>\n\n<ol>\n<li>\nfoo\n</li>\n</ol>\n\n'
+        exp = ('<p>\nmeh\n</p>\n\n<ol>\n<li>\nfoo\n</li>\n</ol>\n\n'
                '<ol>\n<li>\nbar\n</li>\n</ol>\n')
 
         self.converter.wiki_contents = src

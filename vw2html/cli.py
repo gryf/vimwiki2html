@@ -1,7 +1,7 @@
 import argparse
-import dataclasses
 import logging
 import os
+import pathlib
 import shutil
 import sys
 import tomllib
@@ -19,30 +19,23 @@ def abspath(path: str) -> str:
 
 
 class VimWiki2HTMLConverter:
-    # Root path for the wiki, potentially used in templates and is set if
-    # provided source is a directory. If single file is provided, path
+    # Root path for the wiki, potentially used in templates and it
     # must be set either by configuration, or through commandline.
     path: str = None  # '~/vimwiki'
     # HTML output directory
     path_html: str = ''
-    # Main file. Usually index. If no other index is found, it will be
-    # renamed to index anyway.
+    # Main file. Usually index.
     index: str = 'index'
     # Extension for wiki files
     ext: str = '.wiki'
-    # Path to templates. If not specified, will be deducted from the wiki
-    # path and defaults to 'templates' directory within
+    # Path to templates.
     template_path: str = None  # '~/vimwiki/templates/'
     # Default template without extension.
     template_default: str = 'default'
     # Default template extension.
     template_ext: str = '.tpl'
-    # Default CSS file. Note, that it differ from VimWiki behavior, as it
-    # means a relative to vimwiki path location, or it might be provided
-    # as absolute path not necessary within vimwiki path.
-    #
-    # Style file will be copied to path_html, including all media (images).
-    css_name: str = 'style.css'
+    # Style file will be copied to path_html
+    css_name: str = None # 'style.css'
 
     def __init__(self, args):
 
@@ -60,22 +53,30 @@ class VimWiki2HTMLConverter:
         # %content% - where generated content goes
         self._template = ("<html><head><title>VimWiki</title></head>"
                           "<body>%content%</body></html>")
-
-        # Source files. If single file provided it will be a single item on
-        # that list, otherwise provided directory will be scanned for files.
+        self._template_fname = None
         self._sources = []
-        # Assets path with association as fname -> filepath
-        self._assets = {}
-
+        self.assets = []
         self._update(args)
         self.configure()
 
     def configure(self):
-        if not (self.template_path and os.path.exists(self.template_path)):
+        if os.path.exists(self.path_html) and not os.path.isdir(self
+                                                                .path_html):
+            msg = (f"Path `{self.path_html}' exists and is a file. Cannot "
+                   f"proceed.")
+            raise ValueError(msg)
+
+        if os.path.exists(self.path_html):
+            LOG.warning("Path `%s' exists. Contents will be overwriten.",
+                        self.path_html)
+        else:
+            os.makedirs(self.path_html)
+
+        if not (self._template_fname and os.path.exists(self._template_fname)):
             LOG.error("Provided template `%s' doesn't exists. Check your "
-                      "config/or parameters", self.template_path)
+                      "config/or parameters", self._template_fname)
             return
-        with open(self.template_path) as fobj:
+        with open(self._template_fname) as fobj:
             self._template = fobj.read()
 
     def _apply_data_to_template(self, html_obj):
@@ -86,7 +87,8 @@ class VimWiki2HTMLConverter:
                 with open(html_obj.template) as fobj:
                     template = fobj.read()
             except OSError:
-                LOG.exception('Error loading template "%s"', html_obj.template)
+                LOG.error('Error loading template "%s", ignoring.',
+                          html_obj.template)
 
         html = template.replace('%content%', html_obj.html)
         html = html.replace('%root_path%', root_path)
@@ -96,76 +98,54 @@ class VimWiki2HTMLConverter:
 
     def convert(self):
         # copy css file
-        if self._css:
-            fulldname = os.path.dirname(self._css)
-            dst = self._www_path
-            if fulldname != self._root:
-                dname = fulldname.replace(self._root)[1:]
-                os.makedirs(self._www_path, dname)
-                dst = os.path.join(self._www_path, dname)
-            shutil.copy(self._css, dst)
+        #__import__('pdb').set_trace()
+        if self.css_name:
+            shutil.copy(self.css_name, self.path_html)
             # TODO: copy assets from CSS too
 
-        data = [vw2html.html.convert_file(f, self.path_html, self.path)
-                for f in self._source]
+        data = [vw2html.html.convert_file(f, self) for f in self._sources]
         for obj in data:
             with open(obj.html_fname, 'w') as fobj:
                 fobj.write(self._apply_data_to_template(obj))
         return 0
 
     def _update(self, args):
-        self.path_html = abspath(args.output)
+        if args.output:
+            self.path_html = abspath(args.output)
+
         if args.root:
             self.path = abspath(args.root)
 
         if not self.path:
-            raise ValueError("Root of vimwiki not provided, exiting.")
+            msg = "Root of vimwiki not provided, exiting."
+            raise ValueError(msg)
 
         if args.template:
-            if args.template.endswith(self.template_ext):
-                self.template_path = abspath(args.template)
-            else:
-                self.template_path = args.template + self.template_ext
-
-            if os.path.exists(args.template_path):
-                self.template_path = abspath(self.template_path)
-            else:
-                self.template_path = None
-                LOG.error("Provided template path `%s' does not exist",
-                          args.template)
-        elif os.path.exists(os.path.join(self.path, self.template_default +
-                                         self.template_ext)):
-            self.template_path = os.path.join(self.path,
-                                              self.template_default +
-                                              self.template_ext)
+            self._template_fname = abspath(args.template)
+        elif (self.template_path and
+              os.path.exists(os.path.join(self.path, self.template_path,
+                                          self.template_default +
+                                          self.template_ext))):
+            self._template_fname = os.path.join(self.path, self.template_path,
+                                                self.template_default +
+                                                self.template_ext)
 
         if args.stylesheet:
-            css = abspath(args.stylesheet)
-            if os.path.exists(css):
-                self.css_name = css
-            elif self.path and os.path.exists(os.path.join(self.path,
-                                                           args.stylesheet)):
-                self.css_name = abspath(os.path.join(self.path,
-                                                     args.stylesheet))
+            self.css_name = abspath(args.stylesheet)
 
-        if not os.path.exists(self.css_name):
-            LOG.error("Provided stylesheet path `%s' does not exist",
-                      self.css_name)
-            self.css_name = None
-
-        if os.path.isfile(args.source):
+        if args.source and os.path.isfile(args.source):
             self._sources.append(args.source)
         else:
             self.scan_for_wiki_files()
 
     def scan_for_wiki_files(self):
-        for root, _, files in os.walk(self._wiki_path):
+        for root, _, files in os.walk(self.path):
             for fname in files:
                 _fname = os.path.join(root, fname)
                 if _fname.endswith(self.ext):
-                    self._assets.append(_fname)
-                else:
                     self._sources.append(_fname)
+                else:
+                    self.assets.append(_fname)
 
     def read_config(self, config_file):
         try:
@@ -182,12 +162,18 @@ class VimWiki2HTMLConverter:
 
         for key in legal_keys:
             if toml.get(key):
-                setattr(self, key, toml[key])
+                if key in ['css_name', 'path', 'path_html', 'template_path']:
+                    setattr(self, key, abspath(toml[key]))
+                else:
+                    setattr(self, key, toml[key])
 
 
 def _validate_file_or_dir(path):
+    if path is None:
+        path ='.'
     if not os.path.exists(path):
-        raise argparse.ArgumentTypeError(f"Provided '{path}' doesn't exists.")
+        msg = f"Provided '{path}' doesn't exists."
+        raise argparse.ArgumentTypeError(msg)
     return path
 
 
@@ -219,10 +205,10 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--version', action='version',
                         version=vw2html.__version__)
-    parser.add_argument('source', type=_validate_file_or_dir,
+    parser.add_argument('-w', '--source', type=_validate_file_or_dir,
                         help='Wiki file or directory to be recursively scanned'
                         ' for wiki files')
-    parser.add_argument('output', type=_validate_output,
+    parser.add_argument('-o', '--output', type=_validate_output,
                         help='Output directory for html files')
     # Assumed, that css and template files are placed within directory
     # contained wiki files when paths are provided as a relative ones. Using
@@ -231,14 +217,18 @@ def parse_args():
     parser.add_argument('-r', '--root', help="Root vimwiki directory. This "
                         "one is expected to be provided either from "
                         "commandline or via config file")
-    parser.add_argument('-t', '--template', help="Template file")
-    parser.add_argument('-s', '--stylesheet', help="CSS stylesheet file")
-    parser.add_argument('-c', '--config', nargs="?", default=CONF_PATH,
+    parser.add_argument('-t', '--template', type=_validate_file_or_dir,
+                        help="Template file")
+    parser.add_argument('-s', '--stylesheet', type=_validate_file_or_dir,
+                        help="CSS stylesheet file")
+    parser.add_argument('-c', '--config',  type=_validate_file_or_dir,
+                        nargs="?", default=CONF_PATH,
                         help="Alternative config file. if not provided it "
                         "will skip loading confoguration")
 
     logging.basicConfig(level=logging.DEBUG,
-                        format='%(filename)s:%(lineno)d: %(message)s')
+                        format='%(filename)s:%(lineno)d: %(levelname)s: '
+                        '%(message)s')
 
     return parser.parse_args()
 
@@ -246,7 +236,7 @@ def parse_args():
 def main():
     try:
         args = parse_args()
-    except ValueError:
+    except (ValueError, ValueError):
         return 3
 
     converter = VimWiki2HTMLConverter(args)

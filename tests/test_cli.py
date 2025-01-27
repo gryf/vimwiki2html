@@ -122,7 +122,6 @@ class TestCliMain(unittest.TestCase):
                                   output=self._output, config=cli.CONF_PATH)
         with open(cli.CONF_PATH, 'w') as fobj:
             fobj.write('path = "$HOME/foo"\ntemplate_path = "~/vimwiki/tpl.tpl"')
-        __import__('pdb').set_trace()
 
         conv = cli.VimWiki2HTMLConverter(args)
 

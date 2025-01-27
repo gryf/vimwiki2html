@@ -7,6 +7,7 @@ import html
 import logging
 import os
 import re
+import shutil
 import sys
 
 try:
@@ -99,41 +100,41 @@ re_bare_links = re.compile(r'(?<!\w)((?:http:|https:|ftp:|mailto:|www\.)/*[^\s]+
 re_html_links = re.compile(r'\[\[(?P<contents>'
                            r'(?:http:|https:|ftp:|mailto:|www\.)?'
                            r'[^]]*)\]\]')
+re_table_header_sep = re.compile(r'\s?:?-+:?\s?')
 
 class VimWiki2Html:
     """
     Represent single wiki file
     """
     max_header_level = 6
-    codeblock_mark = "⛖⛖{}⛖⛖"
-    inline_code_mark = "⛗⛗{}⛗⛗"
-    links_mark = "🔗🔗{}🔗🔗"
-    images_mark = "🖼🖼{}🖼🖼"
+    # marks are using Unicode Supplementary Private Use Area A in unicode from
+    # the end of the set, there is low chance to fill those with custom
+    # glyphs, and even so, the sentence od **4** (where asterisk is such
+    # symbol and 4 represents any number) is pretty low to exists in written
+    # wiki text.
+    codeblock_mark = "󿿽󿿽{}󿿽󿿽"
+    inline_code_mark = " 󿿼󿿼{}󿿼󿿼"
+    links_mark = " 󿿻󿿻{}󿿻󿿻"
+    images_mark = "󿿺󿿺{}󿿺󿿺"
 
     template_ext = 'tpl'
 
-    def __init__(self, wikifname, output_dir, root):
-        self._rel_root = os.path.relpath(root, os.path.dirname(wikifname))
-        self._rel_wiki_filepath = os.path.relpath(wikifname, root)
-
+    def __init__(self, wikifname, conf):
+        self._conf = conf
         self.level = 1
-        self.root = root
+        self.root = conf.path
         self.template = None
+        self.template_path = conf.template_path
         self.date = ''
         self.wiki_contents = None
         self.nohtml = False
         self._html = ''
+        self._table = False
         self.wiki_fname = wikifname
-        self.output_dir = output_dir
+        self.output_dir = conf.path_html
         # TODO: There is subdirectory lost. Correlate it with rel_root and
         # wiki root.
-        self.html_fname = os.path.join(output_dir, os.path
-                                       .splitext(os.path
-                                                 .basename(wikifname))[0] +
-                                       '.html')
-
-        if 'index' in wikifname:
-            __import__('pdb').set_trace()
+        self.html_fname = self.get_output_path()
         self._title = None
         self._code_blocks = []
         self._inline_codes = []
@@ -143,6 +144,18 @@ class VimWiki2Html:
         self._state = State()
         self._line_processed = False
         self._lists = []
+        self.images_uri = []
+
+    def get_output_path(self):
+        # get relative link out of self.root
+        path = os.path.relpath(self.wiki_fname, start=self.root)
+        outpath = self.output_dir
+        if os.path.dirname(path):
+            outpath = os.path.join(self.output_dir, os.path.dirname(path))
+            os.makedirs(outpath, exist_ok=True)
+
+        return os.path.join(outpath, os.path
+                            .splitext(os.path.basename(path))[0] + '.html')
 
     @property
     def title(self):
@@ -175,7 +188,8 @@ class VimWiki2Html:
         self.read_wiki_file(self.wiki_fname)
         # exit early if there is %nohtml placeholder
         if self.nohtml:
-            LOG.warning(f'Error: no content found for {self.wiki_fname}')
+            LOG.info("Found nohtml placeholder, ignoring `%s'.",
+                     self.wiki_fname)
             return
 
         # do global substitution and removal - remove multiline comments and
@@ -217,6 +231,8 @@ class VimWiki2Html:
 
         self._previus_line = None
         for line in lsource:
+            if 'right for whatever' in line:
+                __import__('pdb').set_trace()
             self._line_processed = False
             header = re_header.match(line)
             if header:
@@ -257,7 +273,7 @@ class VimWiki2Html:
         # s_close_tag_list(self._state.lists, lines)
         lines.extend(self._close_lists())
         close_def_list(self._state.deflist, lines)
-        close_table(self._state.table, lines, self._state.header_ids)
+        #close_table(self._state.table, lines, self._state.header_ids)
         ldest.extend(lines)
 
         return ldest
@@ -330,9 +346,11 @@ class VimWiki2Html:
         line = self._html_escape(line)
 
         ### tables
-        ##if !processed
-        ##    [processed, lines, self._state.table] = process_table(line, self._state.table, self._state.header_ids)
-        ##    call extend(res_lines, lines)
+        lines = self._handle_tables(line)
+        if self._line_processed:
+            if lines:
+                res_lines.extend(lines)
+            return res_lines
 
         # lists
         lines = self._handle_list(line)
@@ -340,7 +358,7 @@ class VimWiki2Html:
             res_lines.extend(lines)
             return res_lines
 
-        if lines:
+        if lines and self._line_processed:
             res_lines.extend(lines)
 
         ### quotes
@@ -358,8 +376,6 @@ class VimWiki2Html:
         ##        self._state.math = close_math(self._state.math, lines)
         ##    if processed && self._state.para
         ##        self._state.para = close_para(self._state.para, lines)
-
-        ##    call map(lines, 'process_inline_tags(v:val, self._state.header_ids)')
 
         ##    call extend(res_lines, lines)
 
@@ -379,15 +395,11 @@ class VimWiki2Html:
         ##    if processed && self._state.para
         ##        self._state.para = close_para(self._state.para, lines)
 
-        ##    call map(lines, 'process_inline_tags(v:val, self._state.header_ids)')
-
         ##    call extend(res_lines, lines)
 
         ### definition lists
         ##if !processed
         ##    [processed, lines, self._state.deflist] = s_process_tag_def_list(line, self._state.deflist)
-
-        ##    call map(lines, 'process_inline_tags(v:val, self._state.header_ids)')
 
         ##    call extend(res_lines, lines)
 
@@ -476,19 +488,13 @@ class VimWiki2Html:
             count += 1
 
     def _separate_inline_codes(self, line):
-        codes = re_code.findall(line)
-        line = re_code.sub(self.inline_code_mark, line)
-
-        if not codes:
-            return line
-
-        line = line.format(*[str(x) for x in range(self._inline_codes_count,
-                                                   self._inline_codes_count +
-                                                   len(codes))])
-
-        for code in codes:
-            self._inline_codes.append(self._parse_inline_code(code))
-            self._inline_codes_count += 1
+        if codes := re_code.findall(line):
+            for code in codes:
+                self._inline_codes.append(self._parse_inline_code(code))
+                line = re_code.sub(self.inline_code_mark
+                                   .format(self._inline_codes_count), line,
+                                   count=1)
+                self._inline_codes_count += 1
 
         return line
 
@@ -502,8 +508,8 @@ class VimWiki2Html:
             return line_match.string
         level = len(open_level)
         if level > self.max_header_level:
-            LOG.warning(f"Warning: Headers cannot exceed "
-                        f"{self.max_header_level} level.")
+            LOG.warning("Headers cannot exceed %s level.",
+                        self.max_header_level)
             return line_match.string
 
         title = _id = line_match["title"].strip()
@@ -614,9 +620,9 @@ class VimWiki2Html:
 
         if not result:
             return
-        basename = result.groups()[0].strip()
-        path = os.path.extsep.join([basename, self.template_ext])
-        self.template = os.path.join(self.root, path)
+
+        template_fname = result.groups()[0].strip() + self._conf.template_ext
+        self.template = os.path.join(self._conf.template_path, template_fname)
         self.wiki_contents = re_ph_template.sub('\n', self.wiki_contents)
 
     def _find_date(self):
@@ -646,12 +652,10 @@ class VimWiki2Html:
                                              .format(len(self._images)),
                                              line, count=1)
             self._images.append(img)
+
         # wiki links
         for link in re_html_links.finditer(line):
-            try:
-                link = self._get_link_out_of_string(link.groupdict()['contents'])
-            except:
-                raise
+            link = self._get_link_out_of_string(link.groupdict()['contents'])
             line = re_html_links.sub(self.links_mark.format(len(self._links)),
                                      line, count=1)
             self._links.append(link)
@@ -694,19 +698,37 @@ class VimWiki2Html:
                 img = dest[len(schema):]
                 break
         if img:
-            # skip dos nonsense
-            if not (img[0].isalpha() and img[1] == ':'):
-                if not os.path.isabs(img):
-                    # TODO: make images point to the copies inside output
-                    # directory
-                    img = os.path.join(self.root, img)
-            return template % os.path.abspath(img)
+            img = self._copy_asset(img)
+            return template % img
 
         if dest.lower().startswith('http'):
             return template % dest
 
         LOG.warning('Image "%s" have no schema', dest)
+        img = self._copy_asset(dest)
         return template % dest
+
+    def _copy_asset(self, img):
+        if (img[0].isalpha() and img[1] == ':'):
+            # ignore windows FS for now
+            return img
+
+        filepath = os.path.relpath(os.path.join(self.root, img),
+                                   start=self.root)
+        if filepath.startswith('..'):
+            LOG.warning("File `%s' pointing outside of wiki root, ignoring",
+                        img)
+            return img
+
+        if not os.path.exists(os.path.join(self.root, filepath)):
+            LOG.warning("File `%s' doesn't exists, ignoring", img)
+            return img
+
+        fullpath = os.path.join(self.root, filepath)
+        outpath = os.path.join(self.output_dir, os.path.dirname(filepath))
+        os.makedirs(outpath, exist_ok=True)
+        shutil.copy(fullpath, outpath)
+        return filepath
 
     def _get_link_out_of_string(self, string):
         description = None
@@ -734,11 +756,14 @@ class VimWiki2Html:
         if link:
             if not (link[0].isalpha() and link[1] == ':'
                     and os.path.isabs(link)):
-                # TODO: use relative link path translated from the src
-                link = os.path.expandvars(os.path
-                                          .expanduser(os.path.join(self.root,
-                                                                   link)))
-            return template % (os.path.abspath(link), description)
+                link = os.path.expandvars(os.path.expanduser(link))
+                link = os.path.abspath(os.path.join(self.root, link))
+                if link in self._conf.assets:
+                    link = self._copy_asset(link)
+                elif self.root in link:
+                    link = os.path.relpath(os.path.join(self.root, link),
+                                           start=self.root)
+            return template % (link, description)
 
         # absolute links
         if target.startswith('//'):
@@ -887,32 +912,127 @@ class VimWiki2Html:
         line = line.replace('&', '&amp;')
         return re_safe_html.sub('&lt;\\1&gt;', line)
 
+    def _handle_tables(self, line):
+        if self._table and not line.strip():
+            # close table
+            lines = [self._table.render()]
+            self._table = False
+            self._line_processed = True
+            return lines
+
+        if not all((line.strip().startswith('|'), line.strip().endswith('|'),
+                   len(line.strip()) > 2)):
+            if self._table:
+                __import__('pdb').set_trace()
+            return line
+
+        if not self._table:
+            self._table = Table()
+        # remove first and last |, split it to have contents
+        self._table.add_rows(line.strip()[1:-1].split('|'))
+
+        # return empty list, defer rendering of table, when whole table is
+        # processed
+        self._line_processed = True
+        return []
 
 
+class Cell:
+    def __init__(self, text):
+        self.rowspan = 1
+        self.colspan = 1
+        self.text = text
+        self.header = False
 
-# text: $ equation_inline $
-#s_rxEqIn = '\$[^$`]\+\$'
+    def __repr__(self):
+        rspan = cspan = ''
+        if self.rowspan > 1:
+            rspan = f' rowspan="{self.rowspan}"'
+        if self.colspan > 1:
+            cspan = f' colspan="{self.colspan}"'
+        td = 'th' if self.header else 'td'
+        return f"<{td}{rspan}{cspan}>{self._apply_attrs(self.text)}</{td}>"
 
-# match all the tags in the wiki and replace them, besides defined, simple ones
-#re_safe_html = re.compile(r'<(\s*/*[^b,i,s,u,sub,sup,kbd,br,hr]*?)>')
+
+class Table:
+    def __init__(self):
+        self.centered = False
+        self.rows = []
+        self.first_row_header = False
+
+    def render(self):
+        self._scan_table()
+        __import__('pdb').set_trace()
+        table = '<table class="center">' if self.centered else "<table>"
+        index = 0
+        if self.first_row_header:
+            table += '<thead>\n<tr>'
+            for item in self.rows[0]:
+                if item is None:
+                    continue
+                table += f"{item}"
+            table += '</tr>\n</thead>'
+            index = 1
+
+        table += '<tbody>'
+        for row in self.rows[index:]:
+            table += '<tr>'
+            for item in row:
+                if item is None:
+                    continue
+                table += f'{item}'
+            table += '</tr>'
+        table += '</tbody>'
+        table += '</table>'
+        return table
+
+    def add_rows(self, row_list):
+        if (all([re_table_header_sep.match(x) for x in row_list]) and
+            len(self.rows) == 1):
+            self.first_row_header = True
+            return
+        self.rows.append(row_list)
+
+    def _scan_table(self):
+        table = [[None for _ in x] for x in self.rows]
+
+        for x, row in enumerate(self.rows):
+            for y, item in enumerate(row):
+                if item.strip() == '\\/':
+                    counter = 0
+                    while counter is not None:
+                        counter += 1
+                        if x - counter < 0:
+                            break
+                        if table[x-counter][y] is None:
+                            continue
+                        table[x-counter][y].rowspan += 1
+                        counter = None
+                    continue
+
+                if item.strip() == '>':
+                    counter = 0
+                    while counter is not None:
+                        counter += 1
+                        if y - counter < 0:
+                            break
+                        if table[x][y-counter] is None:
+                            continue
+                        table[x][y-counter].colspan += 1
+                        counter = None
+                    continue
+
+                c = Cell(item)
+                if self.first_row_header and x == 0:
+                    c.header = True
+                table[x][y] = c
+        self.rows = table
 
 
 def remove_blank_lines(lines):
     while len(lines) and lines[-1].strip() == '':
         del lines[-1]
 
-
-def is_web_link(lnk):
-    # originally there was regexp for searhing shemas in string; looking for
-    # parts of the string should be faster - check that
-    #re_schema = re.compile(r'^\%(https://\|http://\|www.\|ftp://\|'
-    #                       r'file://\|mailto:\)')
-    #return re_schema.match(lnk)
-    for schema in ('https://', 'http://', 'www.', 'ftp://', 'file://',
-                   'mailto'):
-        if schema in lnk.lower():
-            return 1
-    return 0
 
 
 def s_is_img_link(lnk):
@@ -968,11 +1088,11 @@ def s_subst_func(line, regexp, func, *args):
 def s_parameterized_wikiname(wikifile):
     initial = fnamemodify(wikifile, ':t:r')
     lower_sanitized = tolower(initial)
-    substituted = substitute(lower_sanitized, '[^a-z0-9_-]\+','-', 'g')
-    substituted = substitute(substituted, '\-\+','-', 'g')
+    substituted = substitute(lower_sanitized, '[^a-z0-9_-]+','-', 'g')
+    substituted = substitute(substituted, '-+','-', 'g')
     substituted = substitute(substituted, '^-', '', 'g')
     substituted = substitute(substituted, '-$', '', 'g')
-    return substitute(substituted, '\-\+', '-', 'g') + '.html'
+    return substitute(substituted, '-+', '-', 'g') + '.html'
 
 def s_html_insert_contents(html_lines, content):
     lines = []
@@ -993,7 +1113,7 @@ def s_html_insert_contents(html_lines, content):
 
 def s_tag_eqin(value):
     # mathJAX wants \( \) for inline maths
-    return '\(' + s_mid(value, 1) + '\)'
+    return '(' + s_mid(value, 1) + ')'
 
 
 def s_tag_em(value):
@@ -1178,26 +1298,6 @@ def tag_remove_internal_link(value):
     return line
 
 
-def tag_remove_external_link(value):
-    ##value = s_mid(value, 1)
-
-    ##line = ''
-    ##if is_web_link(value)
-    ##    lnkElements = split(value)
-    ##    head = lnkElements[0]
-    ##    rest = join(lnkElements[1:])
-    ##    if rest ==? ''
-    ##        rest = head
-    ##    line = rest
-    ##elseif s_is_img_link(value)
-    ##    line = '<img src="'.value.'" />'
-    ##else
-    ##    # [alskfj sfsf] shouldn't be a link. So return it as it was --
-    ##    # enclosed in [...]
-    ##    line = '['.value.']'
-    return line
-
-
 def s_make_tag(line, regexp, func, *args):
     # Make tags for a given matched regexp.
     # Exclude preformatted text and href links.
@@ -1234,45 +1334,30 @@ def s_make_tag(line, regexp, func, *args):
     ##        pos = matchend(line, patt_splitter, pos)
     return res_line
 
+#def s_process_tags_typefaces(line, header_ids):
+#    line = line
+#    # Convert line tag by tag
+#    ##line = s_make_tag(line, s_rxItalic, 's_tag_em')
+#    ##line = s_make_tag(line, s_rxBold, 's_tag_strong', header_ids)
+#    ##line = s_make_tag(line, vimwiki#vars#get_wikilocal('rx_todo'), 's_tag_todo')
+#    ##line = s_make_tag(line, s_rxDelText, 's_tag_strike')
+#    ##line = s_make_tag(line, s_rxSuperScript, 's_tag_super')
+#    ##line = s_make_tag(line, s_rxSubScript, 's_tag_sub')
+#    ##line = s_make_tag(line, s_rxCode, 's_tag_code')
+#    ##line = s_make_tag(line, s_rxEqIn, 's_tag_eqin')
+#    ##line = s_make_tag(line, vimwiki#vars#get_syntaxlocal('rxTags'), 's_tag_tags', header_ids)
+#    return line
+#
 
-def s_process_tags_remove_links(line):
-    line = line
-    line = s_make_tag(line, '\[\[.\{-}\]\]', 'tag_remove_internal_link')
-    line = s_make_tag(line, '\[.\{-}\]', 'tag_remove_external_link')
-    return line
-
-
-def s_process_tags_typefaces(line, header_ids):
-    line = line
-    # Convert line tag by tag
-    ##line = s_make_tag(line, s_rxItalic, 's_tag_em')
-    ##line = s_make_tag(line, s_rxBold, 's_tag_strong', header_ids)
-    ##line = s_make_tag(line, vimwiki#vars#get_wikilocal('rx_todo'), 's_tag_todo')
-    ##line = s_make_tag(line, s_rxDelText, 's_tag_strike')
-    ##line = s_make_tag(line, s_rxSuperScript, 's_tag_super')
-    ##line = s_make_tag(line, s_rxSubScript, 's_tag_sub')
-    ##line = s_make_tag(line, s_rxCode, 's_tag_code')
-    ##line = s_make_tag(line, s_rxEqIn, 's_tag_eqin')
-    ##line = s_make_tag(line, vimwiki#vars#get_syntaxlocal('rxTags'), 's_tag_tags', header_ids)
-    return line
-
-
-def s_process_tags_links(line):
-    #line = s_make_tag(line, vimwiki#vars#get_syntaxlocal('rxWikiLink'), 's_tag_wikilink')
-    #line = s_make_tag(line, vimwiki#vars#get_global('rxWikiIncl'), 's_tag_wikiincl')
-    #line = s_make_tag(line, vimwiki#vars#get_syntaxlocal('rxWeblink'), 's_tag_weblink')
-    return line
-
-
-def process_inline_tags(line, header_ids):
-    line = s_process_tags_links(line)
-    line = s_process_tags_typefaces(line, header_ids)
-    return line
+#def process_inline_tags(line, header_ids):
+#    line = s_process_tags_links(line)
+#    line = s_process_tags_typefaces(line, header_ids)
+#    return line
 
 
 def close_math(math, ldest):
     if math[0]:
-        insert(ldest, "\\\]")
+        insert(ldest, "\\]")
         return 0
     return math
 
@@ -1296,126 +1381,126 @@ def close_para(para, ldest):
     return para
 
 
-def close_table(table, ldest, header_ids):
-    # The first element of table list is a string which tells us if table should be centered.
-    # The rest elements are rows which are lists of columns:
-    # ['center',
-    #       [ CELL1, CELL2, CELL3 ],
-    #       [ CELL1, CELL2, CELL3 ],
-    #       [ CELL1, CELL2, CELL3 ],
-    # ]
-    # And CELLx is: { 'body': 'col_x', 'rowspan': r, 'colspan': c }
-
-    def s_sum_rowspan(table):
-        table = table
-
-        # Get max cells
-        max_cells = 0
-        for row in table[1:]:
-            n_cells = len(row)
-            if n_cells > max_cells:
-                max_cells = n_cells
-
-        # Sum rowspan
-        for cell_idx in range(max_cells):
-            rows = 1
-
-            for row_idx in range(len(table)-1, 1, -1):
-                if cell_idx >= len(table[row_idx]):
-                    rows = 1
-                    continue
-
-                if table[row_idx][cell_idx].rowspan == 0:
-                    rows += 1
-                else:  # table[row_idx][cell_idx].rowspan == 1
-                    table[row_idx][cell_idx].rowspan = rows
-                    rows = 1
-
-    def s_sum_colspan(table):
-        for row in table[1:]:
-            cols = 1
-
-            for cell_idx in range(len(row)-1, 0, -1):
-                if row[cell_idx].colspan == 0:
-                    cols += 1
-                else:  # row[cell_idx].colspan == 1
-                    row[cell_idx].colspan = cols
-                    cols = 1
-
-    def s_close_tag_row(row, header, ldest, header_ids):
-        ldest.append('<tr>')
-
-        # Set tag element of columns
-        if header:
-            tag_name = 'th'
-        else:
-            tag_name = 'td'
-
-        # Close tag of columns
-        for cell in row:
-            if cell.rowspan == 0 or cell.colspan == 0:
-                continue
-
-            if cell.rowspan > 1:
-                rowspan_attr = f' rowspan="{cell.rowspan}"'
-            else:  # cell.rowspan == 1
-                rowspan_attr = ''
-
-            if cell.colspan > 1:
-                colspan_attr = f' colspan="{cell.colspan}"'
-            else:  # cell.colspan == 1
-                colspan_attr = ''
-
-            ldest.append(f'<{tag_name}{rowspan_attr}{colspan_attr}>')
-            ldest.append(process_inline_tags(cell.body, header_ids))
-            ldest.append('</{tag_name}>')
-
-        add(ldest, '</tr>')
-
-    table = table
-    ldest = ldest
-    if len(table):
-        s_sum_rowspan(table)
-        s_sum_colspan(table)
-
-        if table[0] == 'center':
-            add(ldest, "<table class='center'>")
-        else:
-            add(ldest, '<table>')
-
-        # Empty lists are table separators.
-        # Search for the last empty list. All the above rows would be a table header.
-        # We should exclude the first element of the table list as it is a text tag
-        # that shows if table should be centered or not.
-        head = 0
-        for idx in range(len(table)-1, 1, -1):
-            if empty(table[idx]):
-                head = idx
-                break
-        if head > 0:
-            add(ldest, '<thead>')
-            for row in table[1 : head-1]:
-                if not empty(filter(row, '!empty(v:val)')):
-                    s_close_tag_row(row, 1, ldest, header_ids)
-            add(ldest, '</thead>')
-            add(ldest, '<tbody>')
-            for row in table[head+1 :]:
-                s_close_tag_row(row, 0, ldest, header_ids)
-            add(ldest, '</tbody>')
-        else:
-            for row in table[1 :]:
-                s_close_tag_row(row, 0, ldest, header_ids)
-        add(ldest, '</table>')
-        table = []
-    return table
-
-
-def s_close_tag_list(lists, ldest):
-    while len(lists):
-        item = remove(lists, 0)
-        insert(ldest, item[0])
-
-
+#def close_table(table, ldest, header_ids):
+#    # The first element of table list is a string which tells us if table should be centered.
+#    # The rest elements are rows which are lists of columns:
+#    # ['center',
+#    #       [ CELL1, CELL2, CELL3 ],
+#    #       [ CELL1, CELL2, CELL3 ],
+#    #       [ CELL1, CELL2, CELL3 ],
+#    # ]
+#    # And CELLx is: { 'body': 'col_x', 'rowspan': r, 'colspan': c }
+#
+#    def s_sum_rowspan(table):
+#        table = table
+#
+#        # Get max cells
+#        max_cells = 0
+#        for row in table[1:]:
+#            n_cells = len(row)
+#            if n_cells > max_cells:
+#                max_cells = n_cells
+#
+#        # Sum rowspan
+#        for cell_idx in range(max_cells):
+#            rows = 1
+#
+#            for row_idx in range(len(table)-1, 1, -1):
+#                if cell_idx >= len(table[row_idx]):
+#                    rows = 1
+#                    continue
+#
+#                if table[row_idx][cell_idx].rowspan == 0:
+#                    rows += 1
+#                else:  # table[row_idx][cell_idx].rowspan == 1
+#                    table[row_idx][cell_idx].rowspan = rows
+#                    rows = 1
+#
+#    def s_sum_colspan(table):
+#        for row in table[1:]:
+#            cols = 1
+#
+#            for cell_idx in range(len(row)-1, 0, -1):
+#                if row[cell_idx].colspan == 0:
+#                    cols += 1
+#                else:  # row[cell_idx].colspan == 1
+#                    row[cell_idx].colspan = cols
+#                    cols = 1
+#
+#    def s_close_tag_row(row, header, ldest, header_ids):
+#        ldest.append('<tr>')
+#
+#        # Set tag element of columns
+#        if header:
+#            tag_name = 'th'
+#        else:
+#            tag_name = 'td'
+#
+#        # Close tag of columns
+#        for cell in row:
+#            if cell.rowspan == 0 or cell.colspan == 0:
+#                continue
+#
+#            if cell.rowspan > 1:
+#                rowspan_attr = f' rowspan="{cell.rowspan}"'
+#            else:  # cell.rowspan == 1
+#                rowspan_attr = ''
+#
+#            if cell.colspan > 1:
+#                colspan_attr = f' colspan="{cell.colspan}"'
+#            else:  # cell.colspan == 1
+#                colspan_attr = ''
+#
+#            ldest.append(f'<{tag_name}{rowspan_attr}{colspan_attr}>')
+#            ldest.append(process_inline_tags(cell.body, header_ids))
+#            ldest.append('</{tag_name}>')
+#
+#        add(ldest, '</tr>')
+#
+#    table = table
+#    ldest = ldest
+#    if len(table):
+#        s_sum_rowspan(table)
+#        s_sum_colspan(table)
+#
+#        if table[0] == 'center':
+#            add(ldest, "<table class='center'>")
+#        else:
+#            add(ldest, '<table>')
+#
+#        # Empty lists are table separators.
+#        # Search for the last empty list. All the above rows would be a table header.
+#        # We should exclude the first element of the table list as it is a text tag
+#        # that shows if table should be centered or not.
+#        head = 0
+#        for idx in range(len(table)-1, 1, -1):
+#            if empty(table[idx]):
+#                head = idx
+#                break
+#        if head > 0:
+#            add(ldest, '<thead>')
+#            for row in table[1 : head-1]:
+#                if not empty(filter(row, '!empty(v:val)')):
+#                    s_close_tag_row(row, 1, ldest, header_ids)
+#            add(ldest, '</thead>')
+#            add(ldest, '<tbody>')
+#            for row in table[head+1 :]:
+#                s_close_tag_row(row, 0, ldest, header_ids)
+#            add(ldest, '</tbody>')
+#        else:
+#            for row in table[1 :]:
+#                s_close_tag_row(row, 0, ldest, header_ids)
+#        add(ldest, '</table>')
+#        table = []
+#    return table
+#
+#
+#def s_close_tag_list(lists, ldest):
+#    while len(lists):
+#        item = remove(lists, 0)
+#        insert(ldest, item[0])
+#
+#
 def close_def_list(deflist, ldest):
     if deflist:
         insert(ldest, '</dl>')
@@ -1423,386 +1508,386 @@ def close_def_list(deflist, ldest):
     return deflist
 
 
-def s_process_tag_pre(line, pre):
-    lines = []
-    processed = 0
-    open_match = re.match(r'^(\s*){{{([^\(}}}\)]*)\s*$', line)
-    closed_match = re.match(r'^\s*}}}\s*$', line)
-    if not pre[0] and open_match:
-        block_type = open_match.group()[1].strip()
-        indent = len(open_match.group()[0])
-        if block_type:
-            lines.append(f'<pre {block_type}>')
-        else:
-            lines.append('<pre>')
-        pre = [1, indent]
-        processed = 1
-    elif pre[0] and closed_match:
-        pre = [0, 0]
-        lines.append('</pre>')
-        processed = 1
-    elif pre[0]:
-        processed = 1
-        lines.append(safe_html_preformatted(line))
-    return processed, lines, pre
+#def s_process_tag_pre(line, pre):
+#    lines = []
+#    processed = 0
+#    open_match = re.match(r'^(\s*){{{([^\(}}}\)]*)\s*$', line)
+#    closed_match = re.match(r'^\s*}}}\s*$', line)
+#    if not pre[0] and open_match:
+#        block_type = open_match.group()[1].strip()
+#        indent = len(open_match.group()[0])
+#        if block_type:
+#            lines.append(f'<pre {block_type}>')
+#        else:
+#            lines.append('<pre>')
+#        pre = [1, indent]
+#        processed = 1
+#    elif pre[0] and closed_match:
+#        pre = [0, 0]
+#        lines.append('</pre>')
+#        processed = 1
+#    elif pre[0]:
+#        processed = 1
+#        lines.append(safe_html_preformatted(line))
+#    return processed, lines, pre
+#
+#
+#def s_process_tag_math(line, math):
+#    # math is the list of [is_in_math, indent_of_math]
+#    lines = []
+#    math = math
+#    processed = 0
+#    if not math[0] and line == 'dupa':  # '^\s*{{\$[^\(}}$\)]*\s*$'
+#        css_class = matchstr(line, 'dupa')  # składanie regexpów w lodcie /o\ '{{$\zs.*$')
+#        #FIXME css_class cannot be any string!
+#        css_class = substitute(css_class, '\s\+$', '', 'g')
+#        # store the environment name in a global variable in order to close the
+#        # environment properly
+#        s_current_math_env = matchstr(css_class, '^%\zs\S\+\ze%')
+#        if s_current_math_env:
+#            add(lines, substitute(css_class, '^%\(\S\+\)%', '\\begin{\1}', ''))
+#        elif css_class:
+#            add(lines, "\\\[".css_class)
+#        else:
+#            add(lines, "\\\[")
+#        math = [1, len(matchstr(line, 'asd'))] # no weź. '^\s*\ze{{\$'))]
+#        processed = 1
+#    elif math[0] and line == 'dupa': # '^\s*}}\$\s*$'
+#        math = [0, 0]
+#        if s_current_math_env:
+#            add(lines, "\\end{" + s_current_math_env + '}')
+#        else:
+#            add(lines, "\\\]")
+#        processed = 1
+#    elif math[0]:
+#        processed = 1
+#        add(lines, substitute(line, '^\s\{' + math[1] + '}', '', ''))
+#    return processed, lines, math
+#
+#
+#def s_process_tag_precode(line, quote):
+#    # Process indented precode
+#    lines = []
+#    line = line
+#    quote = quote
+#    processed = 0
+#
+#    # Check if start
+#    ##if line =~# '^\s\{4,}'
+#    ##    line = substitute(line, '^\s*', '', '')
+#    ##    if !quote
+#    ##    # Check if must decrease level
+#    ##        line = '<pre><code>' . line
+#    ##        quote = 1
+#    ##    processed = 1
+#    ##    call add(lines, line)
+#
+#    ### Check if end
+#    ##elseif quote
+#    ##    call add(lines, '</code></pre>')
+#    ##    quote = 0
+#
+#    return processed, lines, quote
+#
+#def s_process_tag_arrow_quote(line, arrow_quote):
+#    lines = []
+#    arrow_quote = arrow_quote
+#    processed = 0
+#    line = line
+#
+#    # Check if must increase level
+#    ##if line =~# '^' . repeat('\s*&gt;', arrow_quote + 1)
+#    ##    # Increase arrow_quote
+#    ##    while line =~# '^' . repeat('\s*&gt;', arrow_quote + 1)
+#    ##        call add(lines, '<blockquote>')
+#    ##        call add(lines, '<p>')
+#    ##        arrow_quote .= 1
+#
+#    ##    # Treat & Add line
+#    ##    stripped_line = substitute(line, '^\%(\s*&gt;\)\+', '', '')
+#    ##    if stripped_line =~# '^\s*$'
+#    ##        call add(lines, '</p>')
+#    ##        call add(lines, '<p>')
+#    ##    call add(lines, stripped_line)
+#    ##    processed = 1
+#
+#    ### Check if must decrease level
+#    ##elseif arrow_quote > 0
+#    ##    while line !~# '^' . repeat('\s*&gt;', arrow_quote - 1)
+#    ##        call add(lines, '</p>')
+#    ##        call add(lines, '</blockquote>')
+#    ##        arrow_quote -= 1
+#    return processed, lines, arrow_quote
+#
+#
+#def s_process_tag_list(line, lists, lstLeadingSpaces):
+#    def s_add_checkbox(line, rx_list):
+#        st_tag = '<li>'
+#        chk = matchlist(line, rx_list)
+#        if not empty(chk) and len(chk[1]) > 0:
+#            ##completion = index(vimwiki#vars#get_wikilocal('listsyms_list'), chk[1])
+#            ##n = len(vimwiki#vars#get_wikilocal('listsyms_list'))
+#            if completion == 0:
+#                st_tag = '<li class="done0">'
+#            ##elseif completion == -1 && chk[1] == vimwiki#vars#get_global('listsym_rejected')
+#            ##    st_tag = '<li class="rejected">'
+#            ##elseif completion > 0 && completion < n
+#            ##    completion = float2nr(round(completion / (n-1.0) * 3.0 + 0.5 ))
+#            ##    st_tag = '<li class="done'.completion.'">'
+#        return [st_tag, '']
+#
+#
+#    in_list = (len(lists) > 0)
+#    lstLeadingSpaces = lstLeadingSpaces
+#
+#    # If it is not list yet then do not process line that starts from *bold*
+#    # text.
+#    # XXX necessary? in *bold* text, no space must follow the first *
+#    #if not in_list:
+#    #    pos = match(line, '^\s*' + s_rxBold)
+#    #    if pos != -1:
+#    #        return [0, [], lstLeadingSpaces]
+#
+#    lines = []
+#    processed = 0
+#    checkboxRegExp = '\s*\[\(.\)\]\s*'
+#    maybeCheckboxRegExp = '\%(' + checkboxRegExp + '\)\?'
+#
+#    if line.strip()[0:1] in ['- ', '* ', '# ']:
+#        lstSym = matchstr(line, s_bullets)
+#        lstTagOpen = '<ul>'
+#        lstTagClose = '</ul>'
+#        lstRegExp = '^\s*' + s_bullets + '\s'
+#    elif re_list_numbers.match(line.strip()[0:1]):
+#    #elseif line =~# '^\s*'.s_numbers.'\s'
+#        lstSym = matchstr(line, s_numbers)
+#        lstTagOpen = '<ol>'
+#        lstTagClose = '</ol>'
+#        lstRegExp = '^\s*'+s_numbers+'\s'
+#    else:
+#        lstSym = ''
+#        lstTagOpen = ''
+#        lstTagClose = ''
+#        lstRegExp = ''
+#
+#    # If we're at the start of a list, figure out how many spaces indented we are so we can later
+#    # determine whether we're indented enough to be at the setart of a blockquote
+#    if lstSym:  # !=# ''
+#        lstLeadingSpaces = strlen(matchstr(line, lstRegExp.maybeCheckboxRegExp))
+#
+#    # Jump empty lines
+#    if in_list and not line:  # =~# '^$'
+#        # Just Passing my way, do you mind ?
+#        #[processed, lines, quote] = s_process_tag_precode(line, g:self._state.quote)
+#        processed = 1
+#        return [processed, lines, lstLeadingSpaces]
+#
+#    # Can embedded indented code in list (Issue #55)
+#    b_permit = in_list
+#    #blockquoteRegExp = '^\s\{' + (lstLeadingSpaces + 2) + ',}[^[:space:]>*-]'
+#    #b_match = lstSym ==# '' && line =~# blockquoteRegExp
+#    #b_match = b_match || g:self._state.quote
+#    #if b_permit && b_match
+#    #    [processed, lines, g:self._state.quote] = s_process_tag_precode(line, g:self._state.quote)
+#    #    if processed == 1
+#    #        return [processed, lines, lstLeadingSpaces]
+#
+#    # New switch
+#    if lstSym:
+#        # To get proper indent level 'retab' the line -- change all tabs
+#        # to spaces*tabstop
+#        line = substitute(line, '\t', repeat(' ', tabstop), 'g')
+#        indent = stridx(line, lstSym)
+#
+#        [st_tag, en_tag] = s_add_checkbox(line, lstRegExp.checkboxRegExp)
+#
+#        if not in_list:
+#            add(lists, [lstTagClose, indent])
+#            add(lines, lstTagOpen)
+#        elif in_list and indent > lists[-1][1]:
+#            item = remove(lists, -1)
+#            add(lines, item[0])
+#
+#            add(lists, [lstTagClose, indent])
+#            add(lines, lstTagOpen)
+#        elif in_list and indent < lists[-1][1]:
+#            while len(lists) and indent < lists[-1][1]:
+#                item = remove(lists, -1)
+#                add(lines, item[0])
+#        elif in_list:
+#            item = remove(lists, -1)
+#            add(lines, item[0])
+#
+#        add(lists, [en_tag, indent])
+#        add(lines, st_tag)
+#        add(lines, substitute(line, lstRegExp.maybeCheckboxRegExp, '', ''))
+#        processed = 1
+#
+#    elif in_list and line:  # =~# '^\s\+\S\+'
+#        add(lines, line)
+#        processed = 1
+#
+#    # Close tag
+#    else:
+#        s_close_tag_list(lists, lines)
+#
+#    return processed, lines, lstLeadingSpaces
+#
+#
+#def s_process_tag_def_list(line, deflist):
+#    lines = []
+#    deflist = deflist
+#    processed = 0
+#    matches = matchlist(line, '\(^.*\)::\%(\s\|$\)\(.*\)')
+#    ##if !deflist && len(matches) > 0
+#    ##    call add(lines, '<dl>')
+#    ##    deflist = 1
+#    ##if deflist && len(matches) > 0
+#    ##    if matches[1] !=? ''
+#    ##        call add(lines, '<dt>'.matches[1].'</dt>')
+#    ##    if matches[2] !=? ''
+#    ##        call add(lines, '<dd>'.matches[2].'</dd>')
+#    ##    processed = 1
+#    ##elseif deflist
+#    ##    deflist = 0
+#    ##    call add(lines, '</dl>')
+#    return processed, lines, deflist
+#
+#
+#def s_process_tag_para(line, para):
+#    lines = []
+#    processed = 0
+#    if line.strip():
+#        if not para:
+#            lines.append('<p>')
+#            para = 1
+#        processed = 1
+#        # default is to ignore newlines (i.e. do not insert <br/> at the end
+#        # of the line)
+#        lines.append(line)
+#    elif para and line.strip() == '':
+#        lines.append('</p>')
+#        para = 0
+#    return processed, lines, para
+#
+#
+#def s_process_tag_h(line, id):
+#    line = line
+#    processed = 0
+#    h_level = 0
+#    h_text = ''
+#    h_id = ''
+#
+#    ##if line =~# vimwiki#vars#get_syntaxlocal('rxHeader')
+#    ##    h_level = vimwiki#u#count_first_sym(line)
+#    ##if h_level > 0
+#
+#    ##    h_text = vimwiki#u#trim(matchstr(line, vimwiki#vars#get_syntaxlocal('rxHeader')))
+#    ##    h_number = ''
+#    ##    h_complete_id = ''
+#    ##    h_id = s_escape_html_attribute(h_text)
+#    ##    centered = (line =~# '^\s')
+#
+#    ##    if h_text !=# vimwiki#vars#get_wikilocal('toc_header')
+#
+#    ##        id[h_level-1] = [h_text, id[h_level-1][1]+1]
+#
+#    ##        # reset higher level ids
+#    ##        for level in range(h_level, 5)
+#    ##            id[level] = ['', 0]
+#
+#    ##        for l in range(h_level-1)
+#    ##            h_number .= id[l][1].'.'
+#    ##            if id[l][0] !=? ''
+#    ##                h_complete_id .= id[l][0].'-'
+#    ##        h_number .= id[h_level-1][1]
+#    ##        h_complete_id .= id[h_level-1][0]
+#
+#    ##        if vimwiki#vars#get_global('html_header_numbering')
+#    ##            num = matchstr(h_number,
+#    ##                        \ '^\(\d.\)\{'.(vimwiki#vars#get_global('html_header_numbering')-1).'}\zs.*')
+#    ##            if !empty(num)
+#    ##                num .= vimwiki#vars#get_global('html_header_numbering_sym')
+#    ##            h_text = num.' '.h_text
+#    ##        h_complete_id = s_escape_html_attribute(h_complete_id)
+#    ##        h_part  = '<div id="'.h_complete_id.'">'
+#    ##        h_part .= '<h'.h_level.' id="'.h_id.'"'
+#    ##        a_tag = '<a href="#'.h_complete_id.'">'
+#
+#    ##    else
+#
+#    ##        h_part = '<div id="'.h_id.'" class="toc">'
+#    ##        h_part .= '<h'.h_level.' id="'.h_id.'"'
+#    ##        a_tag = '<a href="#'.h_id.'">'
+#
+#
+#    ##    if centered
+#    ##        h_part .= ' class="header justcenter">'
+#    ##    else
+#    ##        h_part .= ' class="header">'
+#
+#    ##    h_text = process_inline_tags(h_text, id)
+#
+#    ##    line = h_part.a_tag.h_text.'</a></h'.h_level.'></div>'
+#
+#    ##    processed = 1
+#    return [processed, line]
+#
+#
+#def process_table(line, table, header_ids):
+#    def table_empty_cell(value):
+#        cell = {}
+#
+#        #if value =~# '^\s*\\/\s*$'
+#        #    cell.body        = ''
+#        #    cell.rowspan = 0
+#        #    cell.colspan = 1
+#        #elseif value =~# '^\s*&gt;\s*$'
+#        #    cell.body        = ''
+#        #    cell.rowspan = 1
+#        #    cell.colspan = 0
+#        #elseif value =~# '^\s*$'
+#        #    cell.body        = '&nbsp;'
+#        #    cell.rowspan = 1
+#        #    cell.colspan = 1
+#        #else
+#        #    cell.body        = value
+#        #    cell.rowspan = 1
+#        #    cell.colspan = 1
+#
+#        return cell
+#
+#    def table_add_row(table, line):
+#        #if empty(table)
+#        #    if line =~# '^\s\+'
+#        #        row = ['center', []]
+#        #    else
+#        #        row = ['normal', []]
+#        #else
+#        #    row = [[]]
+#        return row
+#
+#    table = table
+#    lines = []
+#    processed = 0
+#
+#    #if vimwiki#tbl#is_separator(line)
+#    #    call extend(table, table_add_row(table, line))
+#    #    processed = 1
+#    #elseif vimwiki#tbl#is_table(line)
+#    #    call extend(table, table_add_row(table, line))
+#
+#    #    processed = 1
+#    #    # cells = split(line, vimwiki#tbl#cell_splitter(), 1)[1: -2]
+#    #    cells = vimwiki#tbl#get_cells(line)
+#    #    call map(cells, 'table_empty_cell(v:val)')
+#    #    call extend(table[-1], cells)
+#    #else
+#    #    table = close_table(table, lines, header_ids)
+#    return [processed, lines, table]
 
 
-def s_process_tag_math(line, math):
-    # math is the list of [is_in_math, indent_of_math]
-    lines = []
-    math = math
-    processed = 0
-    if not math[0] and line == 'dupa':  # '^\s*{{\$[^\(}}$\)]*\s*$'
-        css_class = matchstr(line, 'dupa')  # składanie regexpów w lodcie /o\ '{{$\zs.*$')
-        #FIXME css_class cannot be any string!
-        css_class = substitute(css_class, '\s\+$', '', 'g')
-        # store the environment name in a global variable in order to close the
-        # environment properly
-        s_current_math_env = matchstr(css_class, '^%\zs\S\+\ze%')
-        if s_current_math_env:
-            add(lines, substitute(css_class, '^%\(\S\+\)%', '\\begin{\1}', ''))
-        elif css_class:
-            add(lines, "\\\[".css_class)
-        else:
-            add(lines, "\\\[")
-        math = [1, len(matchstr(line, 'asd'))] # no weź. '^\s*\ze{{\$'))]
-        processed = 1
-    elif math[0] and line == 'dupa': # '^\s*}}\$\s*$'
-        math = [0, 0]
-        if s_current_math_env:
-            add(lines, "\\end{" + s_current_math_env + '}')
-        else:
-            add(lines, "\\\]")
-        processed = 1
-    elif math[0]:
-        processed = 1
-        add(lines, substitute(line, '^\s\{' + math[1] + '}', '', ''))
-    return processed, lines, math
-
-
-def s_process_tag_precode(line, quote):
-    # Process indented precode
-    lines = []
-    line = line
-    quote = quote
-    processed = 0
-
-    # Check if start
-    ##if line =~# '^\s\{4,}'
-    ##    line = substitute(line, '^\s*', '', '')
-    ##    if !quote
-    ##    # Check if must decrease level
-    ##        line = '<pre><code>' . line
-    ##        quote = 1
-    ##    processed = 1
-    ##    call add(lines, line)
-
-    ### Check if end
-    ##elseif quote
-    ##    call add(lines, '</code></pre>')
-    ##    quote = 0
-
-    return processed, lines, quote
-
-def s_process_tag_arrow_quote(line, arrow_quote):
-    lines = []
-    arrow_quote = arrow_quote
-    processed = 0
-    line = line
-
-    # Check if must increase level
-    ##if line =~# '^' . repeat('\s*&gt;', arrow_quote + 1)
-    ##    # Increase arrow_quote
-    ##    while line =~# '^' . repeat('\s*&gt;', arrow_quote + 1)
-    ##        call add(lines, '<blockquote>')
-    ##        call add(lines, '<p>')
-    ##        arrow_quote .= 1
-
-    ##    # Treat & Add line
-    ##    stripped_line = substitute(line, '^\%(\s*&gt;\)\+', '', '')
-    ##    if stripped_line =~# '^\s*$'
-    ##        call add(lines, '</p>')
-    ##        call add(lines, '<p>')
-    ##    call add(lines, stripped_line)
-    ##    processed = 1
-
-    ### Check if must decrease level
-    ##elseif arrow_quote > 0
-    ##    while line !~# '^' . repeat('\s*&gt;', arrow_quote - 1)
-    ##        call add(lines, '</p>')
-    ##        call add(lines, '</blockquote>')
-    ##        arrow_quote -= 1
-    return processed, lines, arrow_quote
-
-
-def s_process_tag_list(line, lists, lstLeadingSpaces):
-    def s_add_checkbox(line, rx_list):
-        st_tag = '<li>'
-        chk = matchlist(line, rx_list)
-        if not empty(chk) and len(chk[1]) > 0:
-            ##completion = index(vimwiki#vars#get_wikilocal('listsyms_list'), chk[1])
-            ##n = len(vimwiki#vars#get_wikilocal('listsyms_list'))
-            if completion == 0:
-                st_tag = '<li class="done0">'
-            ##elseif completion == -1 && chk[1] == vimwiki#vars#get_global('listsym_rejected')
-            ##    st_tag = '<li class="rejected">'
-            ##elseif completion > 0 && completion < n
-            ##    completion = float2nr(round(completion / (n-1.0) * 3.0 + 0.5 ))
-            ##    st_tag = '<li class="done'.completion.'">'
-        return [st_tag, '']
-
-
-    in_list = (len(lists) > 0)
-    lstLeadingSpaces = lstLeadingSpaces
-
-    # If it is not list yet then do not process line that starts from *bold*
-    # text.
-    # XXX necessary? in *bold* text, no space must follow the first *
-    #if not in_list:
-    #    pos = match(line, '^\s*' + s_rxBold)
-    #    if pos != -1:
-    #        return [0, [], lstLeadingSpaces]
-
-    lines = []
-    processed = 0
-    checkboxRegExp = '\s*\[\(.\)\]\s*'
-    maybeCheckboxRegExp = '\%(' + checkboxRegExp + '\)\?'
-
-    if line.strip()[0:1] in ['- ', '* ', '# ']:
-        lstSym = matchstr(line, s_bullets)
-        lstTagOpen = '<ul>'
-        lstTagClose = '</ul>'
-        lstRegExp = '^\s*' + s_bullets + '\s'
-    elif re_list_numbers.match(line.strip()[0:1]):
-    #elseif line =~# '^\s*'.s_numbers.'\s'
-        lstSym = matchstr(line, s_numbers)
-        lstTagOpen = '<ol>'
-        lstTagClose = '</ol>'
-        lstRegExp = '^\s*'+s_numbers+'\s'
-    else:
-        lstSym = ''
-        lstTagOpen = ''
-        lstTagClose = ''
-        lstRegExp = ''
-
-    # If we're at the start of a list, figure out how many spaces indented we are so we can later
-    # determine whether we're indented enough to be at the setart of a blockquote
-    if lstSym:  # !=# ''
-        lstLeadingSpaces = strlen(matchstr(line, lstRegExp.maybeCheckboxRegExp))
-
-    # Jump empty lines
-    if in_list and not line:  # =~# '^$'
-        # Just Passing my way, do you mind ?
-        #[processed, lines, quote] = s_process_tag_precode(line, g:self._state.quote)
-        processed = 1
-        return [processed, lines, lstLeadingSpaces]
-
-    # Can embedded indented code in list (Issue #55)
-    b_permit = in_list
-    #blockquoteRegExp = '^\s\{' + (lstLeadingSpaces + 2) + ',}[^[:space:]>*-]'
-    #b_match = lstSym ==# '' && line =~# blockquoteRegExp
-    #b_match = b_match || g:self._state.quote
-    #if b_permit && b_match
-    #    [processed, lines, g:self._state.quote] = s_process_tag_precode(line, g:self._state.quote)
-    #    if processed == 1
-    #        return [processed, lines, lstLeadingSpaces]
-
-    # New switch
-    if lstSym:
-        # To get proper indent level 'retab' the line -- change all tabs
-        # to spaces*tabstop
-        line = substitute(line, '\t', repeat(' ', tabstop), 'g')
-        indent = stridx(line, lstSym)
-
-        [st_tag, en_tag] = s_add_checkbox(line, lstRegExp.checkboxRegExp)
-
-        if not in_list:
-            add(lists, [lstTagClose, indent])
-            add(lines, lstTagOpen)
-        elif in_list and indent > lists[-1][1]:
-            item = remove(lists, -1)
-            add(lines, item[0])
-
-            add(lists, [lstTagClose, indent])
-            add(lines, lstTagOpen)
-        elif in_list and indent < lists[-1][1]:
-            while len(lists) and indent < lists[-1][1]:
-                item = remove(lists, -1)
-                add(lines, item[0])
-        elif in_list:
-            item = remove(lists, -1)
-            add(lines, item[0])
-
-        add(lists, [en_tag, indent])
-        add(lines, st_tag)
-        add(lines, substitute(line, lstRegExp.maybeCheckboxRegExp, '', ''))
-        processed = 1
-
-    elif in_list and line:  # =~# '^\s\+\S\+'
-        add(lines, line)
-        processed = 1
-
-    # Close tag
-    else:
-        s_close_tag_list(lists, lines)
-
-    return processed, lines, lstLeadingSpaces
-
-
-def s_process_tag_def_list(line, deflist):
-    lines = []
-    deflist = deflist
-    processed = 0
-    matches = matchlist(line, '\(^.*\)::\%(\s\|$\)\(.*\)')
-    ##if !deflist && len(matches) > 0
-    ##    call add(lines, '<dl>')
-    ##    deflist = 1
-    ##if deflist && len(matches) > 0
-    ##    if matches[1] !=? ''
-    ##        call add(lines, '<dt>'.matches[1].'</dt>')
-    ##    if matches[2] !=? ''
-    ##        call add(lines, '<dd>'.matches[2].'</dd>')
-    ##    processed = 1
-    ##elseif deflist
-    ##    deflist = 0
-    ##    call add(lines, '</dl>')
-    return processed, lines, deflist
-
-
-def s_process_tag_para(line, para):
-    lines = []
-    processed = 0
-    if line.strip():
-        if not para:
-            lines.append('<p>')
-            para = 1
-        processed = 1
-        # default is to ignore newlines (i.e. do not insert <br/> at the end
-        # of the line)
-        lines.append(line)
-    elif para and line.strip() == '':
-        lines.append('</p>')
-        para = 0
-    return processed, lines, para
-
-
-def s_process_tag_h(line, id):
-    line = line
-    processed = 0
-    h_level = 0
-    h_text = ''
-    h_id = ''
-
-    ##if line =~# vimwiki#vars#get_syntaxlocal('rxHeader')
-    ##    h_level = vimwiki#u#count_first_sym(line)
-    ##if h_level > 0
-
-    ##    h_text = vimwiki#u#trim(matchstr(line, vimwiki#vars#get_syntaxlocal('rxHeader')))
-    ##    h_number = ''
-    ##    h_complete_id = ''
-    ##    h_id = s_escape_html_attribute(h_text)
-    ##    centered = (line =~# '^\s')
-
-    ##    if h_text !=# vimwiki#vars#get_wikilocal('toc_header')
-
-    ##        id[h_level-1] = [h_text, id[h_level-1][1]+1]
-
-    ##        # reset higher level ids
-    ##        for level in range(h_level, 5)
-    ##            id[level] = ['', 0]
-
-    ##        for l in range(h_level-1)
-    ##            h_number .= id[l][1].'.'
-    ##            if id[l][0] !=? ''
-    ##                h_complete_id .= id[l][0].'-'
-    ##        h_number .= id[h_level-1][1]
-    ##        h_complete_id .= id[h_level-1][0]
-
-    ##        if vimwiki#vars#get_global('html_header_numbering')
-    ##            num = matchstr(h_number,
-    ##                        \ '^\(\d.\)\{'.(vimwiki#vars#get_global('html_header_numbering')-1).'}\zs.*')
-    ##            if !empty(num)
-    ##                num .= vimwiki#vars#get_global('html_header_numbering_sym')
-    ##            h_text = num.' '.h_text
-    ##        h_complete_id = s_escape_html_attribute(h_complete_id)
-    ##        h_part  = '<div id="'.h_complete_id.'">'
-    ##        h_part .= '<h'.h_level.' id="'.h_id.'"'
-    ##        a_tag = '<a href="#'.h_complete_id.'">'
-
-    ##    else
-
-    ##        h_part = '<div id="'.h_id.'" class="toc">'
-    ##        h_part .= '<h'.h_level.' id="'.h_id.'"'
-    ##        a_tag = '<a href="#'.h_id.'">'
-
-
-    ##    if centered
-    ##        h_part .= ' class="header justcenter">'
-    ##    else
-    ##        h_part .= ' class="header">'
-
-    ##    h_text = process_inline_tags(h_text, id)
-
-    ##    line = h_part.a_tag.h_text.'</a></h'.h_level.'></div>'
-
-    ##    processed = 1
-    return [processed, line]
-
-
-def process_table(line, table, header_ids):
-    def table_empty_cell(value):
-        cell = {}
-
-        #if value =~# '^\s*\\/\s*$'
-        #    cell.body        = ''
-        #    cell.rowspan = 0
-        #    cell.colspan = 1
-        #elseif value =~# '^\s*&gt;\s*$'
-        #    cell.body        = ''
-        #    cell.rowspan = 1
-        #    cell.colspan = 0
-        #elseif value =~# '^\s*$'
-        #    cell.body        = '&nbsp;'
-        #    cell.rowspan = 1
-        #    cell.colspan = 1
-        #else
-        #    cell.body        = value
-        #    cell.rowspan = 1
-        #    cell.colspan = 1
-
-        return cell
-
-    def table_add_row(table, line):
-        #if empty(table)
-        #    if line =~# '^\s\+'
-        #        row = ['center', []]
-        #    else
-        #        row = ['normal', []]
-        #else
-        #    row = [[]]
-        return row
-
-    table = table
-    lines = []
-    processed = 0
-
-    #if vimwiki#tbl#is_separator(line)
-    #    call extend(table, table_add_row(table, line))
-    #    processed = 1
-    #elseif vimwiki#tbl#is_table(line)
-    #    call extend(table, table_add_row(table, line))
-
-    #    processed = 1
-    #    # cells = split(line, vimwiki#tbl#cell_splitter(), 1)[1: -2]
-    #    cells = vimwiki#tbl#get_cells(line)
-    #    call map(cells, 'table_empty_cell(v:val)')
-    #    call extend(table[-1], cells)
-    #else
-    #    table = close_table(table, lines, header_ids)
-    return [processed, lines, table]
-
-
-def convert_file(wikifile, output_dir, root):
-    vwtohtml = VimWiki2Html(wikifile, output_dir, root)
+def convert_file(wikifile, conf):
+    vwtohtml = VimWiki2Html(wikifile, conf)
     vwtohtml.convert()
     return vwtohtml

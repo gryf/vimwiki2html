@@ -7,8 +7,8 @@ from vw2html.html import VimWiki2Html
 class TestHeaders(unittest.TestCase):
 
     def setUp(self):
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/out',
-                                      '/tmp/src')
+        conf = mock.MagicMock()
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', conf)
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 
