@@ -85,7 +85,8 @@ class VimWiki2HTMLConverter:
                                   start=self.path)
         root_path = ''
         if relpath != '.':
-            root_path = '../'.join(['' for _ in range(relpath.split('/') + 1)])
+            root_path = '../'.join(['' for _ in
+                                    range(len(relpath.split('/')) + 1)])
 
         # read template
         template = self._template
@@ -110,7 +111,10 @@ class VimWiki2HTMLConverter:
             shutil.copy(self.css_name, self.path_html)
             # TODO: copy assets from CSS too
 
-        data = [vw2html.html.convert_file(f, self) for f in self._sources]
+        data = [vw2html.html.convert_file(f, self.path, self.path_html,
+                                          self.template_path,
+                                          self.template_ext,
+                                          self.assets) for f in self._sources]
         for obj in data:
             with open(obj.html_fname, 'w') as fobj:
                 fobj.write(self._apply_data_to_template(obj))

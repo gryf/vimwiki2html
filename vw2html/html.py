@@ -119,20 +119,20 @@ class VimWiki2Html:
 
     template_ext = 'tpl'
 
-    def __init__(self, wikifname, conf):
-        self._conf = conf
-        self.root = conf.path
+    def __init__(self, wikifname, path, path_html, template_path, template_ext,
+                 assets):
+        self.assets = assets
+        self.root = path
         self.template = None
-        self.template_path = conf.template_path
+        self.template_path = template_path
+        self.template_ext = template_ext
         self.date = ''
         self.wiki_contents = None
         self.nohtml = False
         self._html = ''
         self._table = False
         self.wiki_fname = wikifname
-        self.output_dir = conf.path_html
-        # TODO: There is subdirectory lost. Correlate it with rel_root and
-        # wiki root.
+        self.output_dir = path_html
         self.html_fname = self.get_output_path()
         self._title = None
         self._code_blocks = []
@@ -143,7 +143,6 @@ class VimWiki2Html:
         self._state = State()
         self._line_processed = False
         self._lists = []
-        self.images_uri = []
 
     def get_output_path(self):
         # get relative link out of self.root
@@ -618,8 +617,8 @@ class VimWiki2Html:
         if not result:
             return
 
-        template_fname = result.groups()[0].strip() + self._conf.template_ext
-        self.template = os.path.join(self._conf.template_path, template_fname)
+        template_fname = result.groups()[0].strip() + self.template_ext
+        self.template = os.path.join(self.template_path, template_fname)
         self.wiki_contents = re_ph_template.sub('\n', self.wiki_contents)
 
     def _find_date(self):
@@ -755,7 +754,7 @@ class VimWiki2Html:
                     and os.path.isabs(link)):
                 link = os.path.expandvars(os.path.expanduser(link))
                 link = os.path.abspath(os.path.join(self.root, link))
-                if link in self._conf.assets:
+                if link in self.assets:
                     link = self._copy_asset(link)
                 elif self.root in link:
                     link = os.path.relpath(os.path.join(self.root, link),
@@ -1882,7 +1881,9 @@ def close_def_list(deflist, ldest):
 #    return [processed, lines, table]
 
 
-def convert_file(wikifile, conf):
-    vwtohtml = VimWiki2Html(wikifile, conf)
+def convert_file(wikifile, path, path_html, template_path, template_ext,
+                 assets):
+    vwtohtml = VimWiki2Html(wikifile, path, path_html, template_path,
+                            template_ext, assets)
     vwtohtml.convert()
     return vwtohtml
