@@ -121,7 +121,6 @@ class VimWiki2Html:
 
     def __init__(self, wikifname, conf):
         self._conf = conf
-        self.level = 1
         self.root = conf.path
         self.template = None
         self.template_path = conf.template_path

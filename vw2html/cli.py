@@ -80,7 +80,14 @@ class VimWiki2HTMLConverter:
             self._template = fobj.read()
 
     def _apply_data_to_template(self, html_obj):
-        root_path = '../'.join(['' for _ in range(html_obj.level)])
+        # calculate %root_path% for nested in subdirectories content
+        relpath = os.path.relpath(os.path.dirname(html_obj.wiki_fname),
+                                  start=self.path)
+        root_path = ''
+        if relpath != '.':
+            root_path = '../'.join(['' for _ in range(relpath.split('/') + 1)])
+
+        # read template
         template = self._template
         if html_obj.template:
             try:
@@ -90,6 +97,7 @@ class VimWiki2HTMLConverter:
                 LOG.error('Error loading template "%s", ignoring.',
                           html_obj.template)
 
+        # replace placeholders
         html = template.replace('%content%', html_obj.html)
         html = html.replace('%root_path%', root_path)
         html = html.replace('%title%', html_obj.title)
