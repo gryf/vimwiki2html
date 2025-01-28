@@ -805,7 +805,7 @@ class VimWiki2Html:
             return f"<{html_ltype}>\n<li{html_check}>\n{text}"
 
         # prepare regexps for lists
-        bullets = ['-', '*', '#']
+        bullets = ['-', '*']
         numbers = (r'('
                    r'\d+\)|'
                    r'\d+\.|'
@@ -922,6 +922,7 @@ class VimWiki2Html:
                    len(line.strip()) > 2)):
             return line
 
+        line = self._apply_attrs(line)
         if not self._table:
             self._table = Table()
         # remove first and last |, split it to have contents
