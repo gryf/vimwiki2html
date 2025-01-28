@@ -26,25 +26,22 @@ example:
 
 .. code:: toml
 
-   # Note: relative path is counted using config file, so it's better to stick
-   # with absolute one
-   path = "relative or absolute path to the vimwiki root path"
-   # Note: relative path will need to have passed wiki-root somehow
-   template_default = "relative or absolute path to the default template file"
-   css_name = "relative or absolute path to the css stylesheet"
+   # Absolute path to the vimwiki root path. Can contain ~/ or env variables
+   path = None
+   # Absolute path to the output path. Can contain ~/ or env variables
    path_html = ''
-   # Main file. Usually index. If no other index is found, it will be renamed
-   # to index anyway.
+   # Main file without extension. Usually index.
    index = 'index'
    # Extension for wiki files
    ext = '.wiki'
-   # Path to templates. If not specified, will be deducted from the wiki path
-   # and defaults to 'templates' directory within
-   template_path = None  # '~/vimwiki/templates/'
+   # Path to templates. If not specified, wiki path will be used.
+   template_path = None
    # Default template without extension.
    template_default = 'default'
    # Default template extension.
    template_ext = '.tpl'
+   # Absolute path to the css stylesheet
+   css_name = None
 
 change with desired values and write under ``$XDG_CONFIG_HOME/vw2html.toml``.
 
