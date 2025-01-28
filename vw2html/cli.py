@@ -98,7 +98,6 @@ class VimWiki2HTMLConverter:
 
     def convert(self):
         # copy css file
-        #__import__('pdb').set_trace()
         if self.css_name:
             shutil.copy(self.css_name, self.path_html)
             # TODO: copy assets from CSS too

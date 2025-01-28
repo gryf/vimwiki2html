@@ -231,8 +231,6 @@ class VimWiki2Html:
 
         self._previus_line = None
         for line in lsource:
-            if 'right for whatever' in line:
-                __import__('pdb').set_trace()
             self._line_processed = False
             header = re_header.match(line)
             if header:
@@ -922,8 +920,6 @@ class VimWiki2Html:
 
         if not all((line.strip().startswith('|'), line.strip().endswith('|'),
                    len(line.strip()) > 2)):
-            if self._table:
-                __import__('pdb').set_trace()
             return line
 
         if not self._table:
@@ -951,7 +947,7 @@ class Cell:
         if self.colspan > 1:
             cspan = f' colspan="{self.colspan}"'
         td = 'th' if self.header else 'td'
-        return f"<{td}{rspan}{cspan}>{self._apply_attrs(self.text)}</{td}>"
+        return f"<{td}{rspan}{cspan}>{self.text}</{td}>"
 
 
 class Table:
@@ -962,7 +958,6 @@ class Table:
 
     def render(self):
         self._scan_table()
-        __import__('pdb').set_trace()
         table = '<table class="center">' if self.centered else "<table>"
         index = 0
         if self.first_row_header:
