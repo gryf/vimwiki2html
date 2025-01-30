@@ -37,6 +37,10 @@ class VimWiki2HTMLConverter:
     # Style file will be copied to path_html
     css_name: str = None # 'style.css'
 
+    # converter specific defaults
+    # force recreate/convert all wiki files passed to the converter
+    force = False
+
     def __init__(self, args):
 
         # Read config and update class attributes accordingly.
@@ -56,28 +60,82 @@ class VimWiki2HTMLConverter:
         self._template_fname = None
         self._sources = []
         self.assets = []
-        self._update(args)
-        self.configure()
+        self.update(args)
 
-    def configure(self):
-        if os.path.exists(self.path_html) and not os.path.isdir(self
-                                                                .path_html):
-            msg = (f"Path `{self.path_html}' exists and is a file. Cannot "
-                   f"proceed.")
+    def update(self, args):
+        # root path
+        self.path = args.root if args.root else self.path
+        self.path_html = args.output if args.output else self.path_html
+
+        if args.source and os.path.isdir(args.source) and not self.path:
+            LOG.info("Assuming provided source directory `%s' is a path to "
+                     "whole wiki", args.source)
+            self.path = abspath(args.source)
+
+        if not self.path:
+            msg = "Root of vimwiki not provided, exiting."
+            LOG.error(msg)
+            raise ValueError(msg)
+        if not os.path.exists(self.path):
+            msg = "Provided vimwiki path doesn't exists, exiting."
+            LOG.error(msg)
             raise ValueError(msg)
 
+        # output dir
+        if not self.path_html:
+            self.path_html = self.path + "_html"
+
         if os.path.exists(self.path_html):
+            if not os.path.isdir(self.path_html):
+                msg = (f"Path `{self.path_html}' exists and is a file. Cannot "
+                       f"proceed.")
+                LOG.error(msg)
+                raise ValueError(msg)
             LOG.warning("Path `%s' exists. Contents will be overwriten.",
                         self.path_html)
         else:
             os.makedirs(self.path_html)
 
-        if not (self._template_fname and os.path.exists(self._template_fname)):
-            LOG.error("Provided template `%s' doesn't exists. Check your "
-                      "config/or parameters", self._template_fname)
-            return
-        with open(self._template_fname) as fobj:
-            self._template = fobj.read()
+        # template
+        if not self.template_path:
+            # assume, template path is the same as wiki path
+            self.template_path = self.path
+
+        if args.template:
+            self._template_fname = args.template
+        elif (self.template_path and
+              os.path.exists(os.path.join(self.template_path,
+                                          self.template_default +
+                                          self.template_ext))):
+            self._template_fname = os.path.join(self.template_path,
+                                                self.template_default +
+                                                self.template_ext)
+        else:
+            template = os.path.join(self.path, self.template_default +
+                                    self.template_ext)
+            LOG.info("No template provided, using default: `%s`", template)
+            if os.path.exists(template):
+                self._template_fname = template
+            else:
+                LOG.warning("Default template doesn't exists, using builtin.")
+
+        self._template = self.get_template_contents()
+
+        # CSS
+        if args.stylesheet:
+            self.css_name = args.stylesheet
+
+        if not self.css_name:
+            LOG.warning("No CSS file provided, using none.")
+
+        # setting force flag
+        self.force = args.force if args.force else self.force
+
+        # source file/dir
+        if args.source and os.path.isfile(args.source):
+            self._sources.append(args.source)
+        else:
+            self.scan_for_wiki_files()
 
     def _apply_data_to_template(self, html_obj):
         # calculate %root_path% for nested in subdirectories content
@@ -107,47 +165,32 @@ class VimWiki2HTMLConverter:
 
     def convert(self):
         # copy css file
+        LOG.info("Starting conversion. Using `%s' as an output directory",
+                 self.path_html)
         if self.css_name:
             shutil.copy(self.css_name, self.path_html)
             # TODO: copy assets from CSS too
 
-        data = [vw2html.html.convert_file(f, self.path, self.path_html,
-                                          self.template_path,
-                                          self.template_ext,
-                                          self.assets) for f in self._sources]
-        for obj in data:
-            with open(obj.html_fname, 'w') as fobj:
-                fobj.write(self._apply_data_to_template(obj))
+        for filepath in self._sources:
+            wiki_obj = vw2html.html.VimWiki2Html(filepath, self.path,
+                                                 self.path_html, self.assets)
+            source_mtime = 1
+            dest_mtime = 0
+            try:
+                source_mtime = os.stat(filepath).st_mtime
+                dest_mtime = os.stat(wiki_obj.html_fname).st_mtime
+            except OSError:
+                pass
+
+            if (source_mtime > dest_mtime) or self.force:
+                # convert only when:
+                # - conversion is forced
+                # - source modify time is newer then destination
+                wiki_obj.convert()
+                with open(wiki_obj.html_fname, 'w') as fobj:
+                    fobj.write(self._apply_data_to_template(wiki_obj))
+
         return 0
-
-    def _update(self, args):
-        if args.output:
-            self.path_html = abspath(args.output)
-
-        if args.root:
-            self.path = abspath(args.root)
-
-        if not self.path:
-            msg = "Root of vimwiki not provided, exiting."
-            raise ValueError(msg)
-
-        if args.template:
-            self._template_fname = abspath(args.template)
-        elif (self.template_path and
-              os.path.exists(os.path.join(self.path, self.template_path,
-                                          self.template_default +
-                                          self.template_ext))):
-            self._template_fname = os.path.join(self.path, self.template_path,
-                                                self.template_default +
-                                                self.template_ext)
-
-        if args.stylesheet:
-            self.css_name = abspath(args.stylesheet)
-
-        if args.source and os.path.isfile(args.source):
-            self._sources.append(args.source)
-        else:
-            self.scan_for_wiki_files()
 
     def scan_for_wiki_files(self):
         for root, _, files in os.walk(self.path):
@@ -236,7 +279,8 @@ def parse_args():
                         nargs="?", default=CONF_PATH,
                         help="Alternative config file. if not provided it "
                         "will skip loading confoguration")
-
+    parser.add_argument('-f', '--force', action='store_true', help="Convert "
+                        "all files even if source seems unchanged")
     logging.basicConfig(level=logging.DEBUG,
                         format='%(filename)s:%(lineno)d: %(levelname)s: '
                         '%(message)s')
@@ -247,10 +291,13 @@ def parse_args():
 def main():
     try:
         args = parse_args()
-    except (ValueError, ValueError):
+    except ValueError:
         return 3
 
-    converter = VimWiki2HTMLConverter(args)
+    try:
+        converter = VimWiki2HTMLConverter(args)
+    except ValueError:
+        return 4
     return converter.convert()
 
 
