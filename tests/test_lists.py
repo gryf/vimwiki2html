@@ -6,8 +6,8 @@ from vw2html.html import VimWiki2Html
 
 class TestUL(unittest.TestCase):
     def setUp(self):
-        conf = mock.MagicMock()
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', conf)
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/wiki',
+                                      '/tmp/wiki_html', [])
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 
@@ -28,22 +28,22 @@ class TestUL(unittest.TestCase):
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
 
-    def test_unsorted_nested_list(self):
+    def test_sorted_nested_list(self):
         src = '# foo\n # bar\n# baz'
-        exp = ('<ul>\n<li>\nfoo\n'
-               '<ul>\n<li>\nbar\n</li>\n</ul>\n'
-               '\n</li>\n<li>\nbaz\n</li>\n</ul>\n')
+        exp = ('<ol>\n<li>\nfoo\n'
+               '<ol>\n<li>\nbar\n</li>\n</ol>\n'
+               '\n</li>\n<li>\nbaz\n</li>\n</ol>\n')
 
         self.converter.wiki_contents = src
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
 
-    def test_unsorted_more_nested_list(self):
+    def test_sorted_more_nested_list(self):
         src = '# foo\n # bar\n  # baz\n# meh'
-        exp = ('<ul>\n<li>\nfoo\n'
-               '<ul>\n<li>\nbar\n'
-               '<ul>\n<li>\nbaz\n</li>\n</ul>\n\n</li>\n</ul>\n\n</li>\n'
-               '<li>\nmeh\n</li>\n</ul>\n')
+        exp = ('<ol>\n<li>\nfoo\n'
+               '<ol>\n<li>\nbar\n'
+               '<ol>\n<li>\nbaz\n</li>\n</ol>\n\n</li>\n</ol>\n\n</li>\n'
+               '<li>\nmeh\n</li>\n</ol>\n')
 
         self.converter.wiki_contents = src
         self.converter.convert()

@@ -7,8 +7,8 @@ from vw2html import html
 class TestCodeBlock(unittest.TestCase):
 
     def setUp(self):
-        conf = mock.MagicMock()
-        self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', conf)
+        self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', '/tmp/wiki',
+                                           '/tmp/wiki_html', [])
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
         html.pygments = mock.MagicMock()
@@ -67,8 +67,8 @@ class TestCodeBlock(unittest.TestCase):
 class TestInlineCode(unittest.TestCase):
 
     def setUp(self):
-        conf = mock.MagicMock()
-        self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', conf)
+        self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', '/tmp/wiki',
+                                           '/tmp/wiki_html', [])
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
         html.pygments = mock.MagicMock()

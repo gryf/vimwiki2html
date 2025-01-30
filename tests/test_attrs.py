@@ -7,8 +7,8 @@ from vw2html.html import VimWiki2Html
 class TestTextAttrs(unittest.TestCase):
 
     def setUp(self):
-        conf = mock.MagicMock()
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', conf)
+        self.converter = VimWiki2Html('/tmp/wiki/foo.wiki', '/tmp/wiki',
+                                      '/tmp/wiki_html', [])
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 

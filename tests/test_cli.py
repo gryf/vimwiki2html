@@ -83,12 +83,14 @@ class TestCliMain(unittest.TestCase):
         args = argparse.Namespace(root=os.path.dirname(self._source),
                                   template=None, stylesheet=None,
                                   source=self._source, output=self._output,
-                                  config=cli.CONF_PATH)
+                                  config=cli.CONF_PATH, force=False)
         vw2hc = cli.VimWiki2HTMLConverter(args)
         self.assertIsInstance(vw2hc, cli.VimWiki2HTMLConverter)
         self.assertEqual(vw2hc.path, os.path.dirname(self._source))
         self.assertEqual(vw2hc._template, '<html><head><title>VimWiki</title>'
-                         '</head><body>%content%</body></html>')
+                         '<link rel="Stylesheet" type="text/css" '
+                         'href="%root_path%%css%"></head>'
+                         '<body>%content%</body></html>')
         self.assertIsNone(vw2hc.css_name)
 
     def test_read_conf_no_config_no_root(self):
@@ -101,7 +103,8 @@ class TestCliMain(unittest.TestCase):
     def test_read_conf_no_config(self):
         args = argparse.Namespace(root=self._source, template=None,
                                   stylesheet=None, source=self._source,
-                                  output=self._output, config=cli.CONF_PATH)
+                                  output=self._output, config=cli.CONF_PATH,
+                                  force=False)
 
         conv = cli.VimWiki2HTMLConverter(args)
         self.assertIsInstance(conv, cli.VimWiki2HTMLConverter)
@@ -109,28 +112,7 @@ class TestCliMain(unittest.TestCase):
         self.assertEqual(conv.path_html, self._output)
         self.assertEqual(conv.index, cli.VimWiki2HTMLConverter.index)
         self.assertEqual(conv.ext, cli.VimWiki2HTMLConverter.ext)
-        self.assertIsNone(conv.template_path)
-        self.assertEqual(conv.template_default,
-                         cli.VimWiki2HTMLConverter.template_default)
-        self.assertEqual(conv.template_ext,
-                         cli.VimWiki2HTMLConverter.template_ext)
-        self.assertIsNone(conv.css_name)
-
-    def test_read_conf_read_good_conf(self):
-        args = argparse.Namespace(root=None, template=None,
-                                  stylesheet=None, source=self._source,
-                                  output=self._output, config=cli.CONF_PATH)
-        with open(cli.CONF_PATH, 'w') as fobj:
-            fobj.write('path = "$HOME/foo"\ntemplate_path = "~/vimwiki/tpl.tpl"')
-
-        conv = cli.VimWiki2HTMLConverter(args)
-
-        self.assertIsInstance(conv, cli.VimWiki2HTMLConverter)
-        self.assertEqual(conv.path,  "$HOME/foo")
-        self.assertEqual(conv.path_html, self._output)
-        self.assertEqual(conv.index, cli.VimWiki2HTMLConverter.index)
-        self.assertEqual(conv.ext, cli.VimWiki2HTMLConverter.ext)
-        self.assertEqual(conv.template_path, "~/vimwiki/tpl.tpl")
+        self.assertEqual(conv.template_path, conv.path)
         self.assertEqual(conv.template_default,
                          cli.VimWiki2HTMLConverter.template_default)
         self.assertEqual(conv.template_ext,
@@ -140,7 +122,8 @@ class TestCliMain(unittest.TestCase):
     def test_read_conf_read_good_conf(self):
         args = argparse.Namespace(root=self._source, template=None,
                                   stylesheet=None, source=self._source,
-                                  output=self._output, config=cli.CONF_PATH)
+                                  output=self._output, config=cli.CONF_PATH,
+                                  force=False)
         with open(cli.CONF_PATH, 'w') as fobj:
             fobj.write('wrong stuff = even more wrong')
 
@@ -151,7 +134,7 @@ class TestCliMain(unittest.TestCase):
         self.assertEqual(conv.path_html, self._output)
         self.assertEqual(conv.index, cli.VimWiki2HTMLConverter.index)
         self.assertEqual(conv.ext, cli.VimWiki2HTMLConverter.ext)
-        self.assertIsNone(conv.template_path)
+        self.assertEqual(conv.template_path, conv.path)
         self.assertEqual(conv.template_default,
                          cli.VimWiki2HTMLConverter.template_default)
         self.assertEqual(conv.template_ext,

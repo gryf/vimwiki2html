@@ -7,9 +7,8 @@ from vw2html.html import VimWiki2Html
 
 class TestWikiLink(unittest.TestCase):
     def setUp(self):
-        conf = mock.MagicMock()
-        conf.path = "/tmp/wiki"
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', conf)
+        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/wiki',
+                                      '/tmp/wiki_html', [])
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
         self._home = os.environ['HOME']
