@@ -155,7 +155,8 @@ class VimWiki2HTMLConverter:
         html = template.replace('%content%', html_obj.html)
         html = html.replace('%root_path%', root_path)
         html = html.replace('%title%', html_obj.title)
-        html = html.replace('%css%', os.path.basename(self.css_name))
+        if self.css_name:
+            html = html.replace('%css%', os.path.basename(self.css_name))
         return html.replace('%date%', html_obj.date)
 
     def get_template_contents(self, template=None):
