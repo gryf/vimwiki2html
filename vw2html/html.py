@@ -31,7 +31,6 @@ class State:
     list_leading_spaces: bool = False
     # [in_math, indent_math]
     math: list[int, str] = dataclasses.field(default_factory=list)
-    table: list = dataclasses.field(default_factory=list)
     deflist: bool = False
     lists: list = dataclasses.field(default_factory=list)
     # [last seen header text in this level, number]
@@ -62,6 +61,97 @@ class List:
 
     def __ge__(self, other):
         return len(self.indent) >= len(other.indent)
+
+
+class Cell:
+    def __init__(self, text):
+        self.rowspan = 1
+        self.colspan = 1
+        self.text = text
+        self.header = False
+
+    def __repr__(self):
+        rspan = cspan = ''
+        if self.rowspan > 1:
+            rspan = f' rowspan="{self.rowspan}"'
+        if self.colspan > 1:
+            cspan = f' colspan="{self.colspan}"'
+        td = 'th' if self.header else 'td'
+        return f"<{td}{rspan}{cspan}>{self.text}</{td}>"
+
+
+class Table:
+    def __init__(self):
+        self.centered = False
+        self.rows = []
+        self.first_row_header = False
+
+    def render(self):
+        self._scan_table()
+        table = '<table class="center">' if self.centered else "<table>"
+        index = 0
+        if self.first_row_header:
+            table += '<thead>\n<tr>'
+            for item in self.rows[0]:
+                if item is None:
+                    continue
+                table += f"{item}"
+            table += '</tr>\n</thead>'
+            index = 1
+
+        table += '<tbody>'
+        for row in self.rows[index:]:
+            table += '<tr>'
+            for item in row:
+                if item is None:
+                    continue
+                table += f'{item}'
+            table += '</tr>'
+        table += '</tbody>'
+        table += '</table>'
+        return table
+
+    def add_rows(self, row_list):
+        if (all([re_table_header_sep.match(x) for x in row_list]) and
+            len(self.rows) == 1):
+            self.first_row_header = True
+            return
+        self.rows.append(row_list)
+
+    def _scan_table(self):
+        table = [[None for _ in x] for x in self.rows]
+
+        for x, row in enumerate(self.rows):
+            for y, item in enumerate(row):
+                if item.strip() == '\\/':
+                    counter = 0
+                    while counter is not None:
+                        counter += 1
+                        if x - counter < 0:
+                            break
+                        if table[x-counter][y] is None:
+                            continue
+                        table[x-counter][y].rowspan += 1
+                        counter = None
+                    continue
+
+                if item.strip() == '>':
+                    counter = 0
+                    while counter is not None:
+                        counter += 1
+                        if y - counter < 0:
+                            break
+                        if table[x][y-counter] is None:
+                            continue
+                        table[x][y-counter].colspan += 1
+                        counter = None
+                    continue
+
+                c = Cell(item)
+                if self.first_row_header and x == 0:
+                    c.header = True
+                table[x][y] = c
+        self.rows = table
 
 
 re_ph_nohtml = re.compile(r'^\s*%nohtml\s*$', flags=re.MULTILINE)
@@ -260,7 +350,6 @@ class VimWiki2Html:
         close_math(self._state.math, lines)
         lines.extend(self._close_lists())
         close_def_list(self._state.deflist, lines)
-        #close_table(self._state.table, lines, self._state.header_ids)
         ldest.extend(lines)
 
         return ldest
@@ -284,9 +373,6 @@ class VimWiki2Html:
 
         self._line_processed = True
         lines = []
-        if len(self._state.table):
-            self._state.table = close_table(self._state.table, lines,
-                                            self._state.header_ids)
         if self._state.deflist:
             self._state.deflist = close_def_list(self._state.deflist,
                                                  lines)
@@ -334,9 +420,9 @@ class VimWiki2Html:
 
         ### tables
         lines = self._handle_tables(line)
+        if lines:
+            res_lines.extend(lines)
         if self._line_processed:
-            if lines:
-                res_lines.extend(lines)
             return res_lines
 
         # lists
@@ -355,8 +441,6 @@ class VimWiki2Html:
         ##        self._state.deflist = close_def_list(self._state.deflist, lines)
         ##    if processed && self._state.arrow_quote
         ##        self._state.quote = close_arrow_quote(self._state.arrow_quote, lines)
-        ##    if processed && len(self._state.table)
-        ##        self._state.table = close_table(self._state.table, lines, self._state.header_ids)
         ##    if processed && self._state.math[0]
         ##        self._state.math = close_math(self._state.math, lines)
         ##    if processed && self._state.para
@@ -371,8 +455,6 @@ class VimWiki2Html:
         ##        self._state.quote = close_precode(self._state.quote, lines)
         ##    if processed && self._state.deflist
         ##        self._state.deflist = close_def_list(self._state.deflist, lines)
-        ##    if processed && len(self._state.table)
-        ##        self._state.table = close_table(self._state.table, lines, self._state.header_ids)
         ##    if processed && self._state.math[0]
         ##        self._state.math = close_math(self._state.math, lines)
         ##    if processed && self._state.para
@@ -400,9 +482,6 @@ class VimWiki2Html:
                                                         lines)
         if self._line_processed and self._state.math[0]:
             self._state.math = close_math(self._state.math, res_lines)
-        if self._line_processed and len(self._state.table):
-            self._state.table = close_table(self._state.table, res_lines,
-                                            self._state.header_ids)
 
         lines = [self._apply_attrs(x) for x in lines]
 
@@ -890,16 +969,14 @@ class VimWiki2Html:
         return re_safe_html.sub('&lt;\\1&gt;', line)
 
     def _handle_tables(self, line):
-        if self._table and not line.strip():
-            # close table
-            lines = [self._table.render()]
-            self._table = False
-            self._line_processed = True
-            return lines
-
-        if not all((line.strip().startswith('|'), line.strip().endswith('|'),
-                   len(line.strip()) > 2)):
-            return line
+        if not re.match(r'^\|.+\|$', line):
+            if self._table:
+                # close table
+                lines = [self._table.render()]
+                self._table = False
+                #self._line_processed = True
+                return lines
+            return
 
         line = self._apply_attrs(line)
         if not self._table:
@@ -911,97 +988,6 @@ class VimWiki2Html:
         # processed
         self._line_processed = True
         return []
-
-
-class Cell:
-    def __init__(self, text):
-        self.rowspan = 1
-        self.colspan = 1
-        self.text = text
-        self.header = False
-
-    def __repr__(self):
-        rspan = cspan = ''
-        if self.rowspan > 1:
-            rspan = f' rowspan="{self.rowspan}"'
-        if self.colspan > 1:
-            cspan = f' colspan="{self.colspan}"'
-        td = 'th' if self.header else 'td'
-        return f"<{td}{rspan}{cspan}>{self.text}</{td}>"
-
-
-class Table:
-    def __init__(self):
-        self.centered = False
-        self.rows = []
-        self.first_row_header = False
-
-    def render(self):
-        self._scan_table()
-        table = '<table class="center">' if self.centered else "<table>"
-        index = 0
-        if self.first_row_header:
-            table += '<thead>\n<tr>'
-            for item in self.rows[0]:
-                if item is None:
-                    continue
-                table += f"{item}"
-            table += '</tr>\n</thead>'
-            index = 1
-
-        table += '<tbody>'
-        for row in self.rows[index:]:
-            table += '<tr>'
-            for item in row:
-                if item is None:
-                    continue
-                table += f'{item}'
-            table += '</tr>'
-        table += '</tbody>'
-        table += '</table>'
-        return table
-
-    def add_rows(self, row_list):
-        if (all([re_table_header_sep.match(x) for x in row_list]) and
-            len(self.rows) == 1):
-            self.first_row_header = True
-            return
-        self.rows.append(row_list)
-
-    def _scan_table(self):
-        table = [[None for _ in x] for x in self.rows]
-
-        for x, row in enumerate(self.rows):
-            for y, item in enumerate(row):
-                if item.strip() == '\\/':
-                    counter = 0
-                    while counter is not None:
-                        counter += 1
-                        if x - counter < 0:
-                            break
-                        if table[x-counter][y] is None:
-                            continue
-                        table[x-counter][y].rowspan += 1
-                        counter = None
-                    continue
-
-                if item.strip() == '>':
-                    counter = 0
-                    while counter is not None:
-                        counter += 1
-                        if y - counter < 0:
-                            break
-                        if table[x][y-counter] is None:
-                            continue
-                        table[x][y-counter].colspan += 1
-                        counter = None
-                    continue
-
-                c = Cell(item)
-                if self.first_row_header and x == 0:
-                    c.header = True
-                table[x][y] = c
-        self.rows = table
 
 
 def remove_blank_lines(lines):
