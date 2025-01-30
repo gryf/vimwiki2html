@@ -1,0 +1,22 @@
+[[vimwiki]]
+# Directory to the vimwiki root path. Can contain ~/ or env variables.
+path = "./samplewiki"
+# Directory to the output path. Can contain ~/ or env variables. if not
+# provided it will be created as adding _html suffix for whatever directory 
+# is set on path.
+path_html = ''
+# Main file without extension. Usually index.
+index = 'index'
+# Extension for wiki files.
+ext = '.wiki'
+# Path to templates. If not specified, wiki path will be used.
+template_path = ''
+# Default template without extension.
+template_default = 'default'
+# Default template extension.
+template_ext = '.tpl'
+# Absolute path to the css stylesheet.
+css_name = ''
+
+[[vimwiki]]
+path = "~/vimwiki"
