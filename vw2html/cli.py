@@ -44,7 +44,7 @@ class VimWiki2HTMLConverter:
     def __init__(self, args):
 
         # Read config and update class attributes accordingly.
-        self.read_config(args.config)
+        self.read_config(args.config, args.source)
 
         # Default template to put contents in case there is no default
         # template found. If not provided by the commandline, this are the
@@ -215,7 +215,15 @@ class VimWiki2HTMLConverter:
                 else:
                     self.assets.append(_fname)
 
-    def read_config(self, config_file):
+    def read_config(self, config_file, source):
+        if self.path:
+            potential_path = self.path
+        if source:
+            source = abspath(source)
+            if not os.path.isdir(source):
+                source = os.path.dirname(source)
+            potential_path = source
+
         try:
             with open(config_file, "rb") as fobj:
                 toml = tomllib.load(fobj)
@@ -228,12 +236,34 @@ class VimWiki2HTMLConverter:
                       "template_default", "template_default", "template_ext",
                       "template_path", 'path', 'force']
 
-        for key in legal_keys:
-            if toml.get(key):
-                if key in ['css_name', 'path', 'path_html', 'template_path']:
-                    setattr(self, key, abspath(toml[key]))
-                else:
-                    setattr(self, key, toml[key])
+        conf_dict = {}
+        if potential_path:
+            for confsection in toml.get('vimwiki', []):
+                if not confsection.get('path'):
+                    continue
+                path = abspath(confsection['path'])
+                if potential_path == path:
+                    conf_dict = confsection
+                    break
+        if conf_dict:
+            for key in legal_keys:
+                if conf_dict.get(key):
+                    if key in ['css_name', 'path', 'path_html',
+                               'template_path']:
+                        setattr(self, key, abspath(conf_dict[key]))
+                    else:
+                        setattr(self, key, conf_dict[key])
+        elif toml.get('vimwiki',
+                      []) and toml['vimwiki'] and toml['vimwiki'][0]:
+            # just get the first one
+            conf_dict = ['vimwiki'][0].get(key)
+            for key in legal_keys:
+                if conf_dict.get(key):
+                    if key in ['css_name', 'path', 'path_html',
+                               'template_path']:
+                        setattr(self, key, abspath(conf_dict[key]))
+                    else:
+                        setattr(self, key, conf_dict[key])
 
 
 def _validate_file_or_dir(path):
