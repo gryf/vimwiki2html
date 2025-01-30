@@ -155,18 +155,22 @@ Conversion state
 What's supported:
 
 - Typefaces
+
   - bold/strong
   - italic/emphasis
   - strikeout/del
   - inline code/monospace
   - superscript
   - subscript
+
 - Headers
 - Paragraphs
 - Lists
+
   - Support for unordered lists (``*``, ``-``, ``#``)
   - Support for ordered lists (``1.``, ``2)``)
   - Support for TODO lists (default markings for the items)
+
 - Preformatted text
 
   - code blocks can be colored using ``{{{type=foo``` or ``{{{foo`` where "foo"
@@ -175,6 +179,7 @@ What's supported:
 - Comments
 - Horizontal line
 - Placeholders
+
   - Title
   - Date
   - Template
@@ -189,6 +194,7 @@ What's supported:
     it's placement on filesystem
 
 - Links
+
   - Diary
   - wikilinks (absolute/relative/plain/anchors)
   - external links (local/remote/bare)
@@ -198,7 +204,9 @@ What's supported:
     it's simply working)
 
   - raw links (or bare)
+
 - Tables
+
   - tables with headers
   - columns and rows spanning
 
@@ -246,13 +254,16 @@ What's not:
 
     will produce two separate lists, not like in VimWiki html parser single
     list with second item having swallowed empty line.
+
 - Tables
+
   - no aligning for the columns (``VimWiki2HTML`` doesn't do that either)
+
 - Mathematical formulae (both - inline and block)
 - Blockquotes
 - Tags
 - Explicit html tags (default list is ``b``, ``i``, ``s``, ``u``, ``sub``,
-  ``sup``, ``kbd``, ``br`` and ``hr``.
+  ``sup``, ``kbd``, ``br`` and ``hr``).
 - Escape HTML tags but the one excluded
 
 License
