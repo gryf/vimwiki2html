@@ -55,8 +55,10 @@ class VimWiki2HTMLConverter:
         # %root_path% - root path of the generated content - / by default
         # %wiki_path% - unused
         # %content% - where generated content goes
-        self._template = ("<html><head><title>VimWiki</title></head>"
-                          "<body>%content%</body></html>")
+        self._template = ('<html><head><title>VimWiki</title>'
+                          '<link rel="Stylesheet" type="text/css" '
+                          'href="%root_path%%css%"></head>'
+                          '<body>%content%</body></html>')
         self._template_fname = None
         self._sources = []
         self.assets = []
@@ -147,21 +149,32 @@ class VimWiki2HTMLConverter:
                                     range(len(relpath.split('/')) + 1)])
 
         # read template
-        template = self._template
-        if html_obj.template:
-            try:
-                with open(html_obj.template) as fobj:
-                    template = fobj.read()
-            except OSError:
-                LOG.error('Error loading template "%s", ignoring.',
-                          html_obj.template)
+        template = self.get_template_contents(html_obj.template)
 
         # replace placeholders
         html = template.replace('%content%', html_obj.html)
         html = html.replace('%root_path%', root_path)
         html = html.replace('%title%', html_obj.title)
-        html = html.replace('%date%', html_obj.date)
-        return html
+        html = html.replace('%css%', os.path.basename(self.css_name))
+        return html.replace('%date%', html_obj.date)
+
+    def get_template_contents(self, template=None):
+        if template:
+            path = os.path.join(self.template_path, template
+                                + self.template_ext)
+            if not os.path.exists(path):
+                LOG.error('Error loading template "%s", ignoring.',
+                          template)
+                return ""
+            with open(path) as fobj:
+                return fobj.read()
+
+        if not any([self._template_fname and os.path.exists(self.
+                                                            _template_fname)]):
+            return self._template
+
+        with open(self._template_fname) as fobj:
+            return fobj.read()
 
     def convert(self):
         # copy css file
@@ -206,13 +219,13 @@ class VimWiki2HTMLConverter:
             with open(config_file, "rb") as fobj:
                 toml = tomllib.load(fobj)
         except (OSError, ValueError):
-            LOG.exception("Exception on reading config file '%s'. Ignoring.",
-                          config_file)
+            LOG.error("Exception on reading config file '%s'. Ignoring.",
+                      config_file)
             return
 
         legal_keys = ["css_name", "ext", "index", "path_html",
                       "template_default", "template_default", "template_ext",
-                      "template_path", 'path']
+                      "template_path", 'path', 'force']
 
         for key in legal_keys:
             if toml.get(key):
@@ -259,7 +272,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--version', action='version',
                         version=vw2html.__version__)
-    parser.add_argument('-w', '--source', type=_validate_file_or_dir,
+    parser.add_argument('source', nargs="?", type=_validate_file_or_dir,
                         help='Wiki file or directory to be recursively scanned'
                         ' for wiki files')
     parser.add_argument('-o', '--output', type=_validate_output,
