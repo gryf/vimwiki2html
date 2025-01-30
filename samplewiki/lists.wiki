@@ -1,22 +1,24 @@
 = Lists =
 
-== Unordered list with single item ==
+== Supported ==
+
+=== Unordered list with single item ===
 
 * foo
 
-== Three element unordered list ==
+=== Three element unordered list ===
 
 - foo
 - bar
 - baz
 
-== Unordered nested list ==
+=== Unordered nested list ===
 
 # foo
  # bar
 # baz
 
-== Unordered even more nested list ==
+=== Unordered even more nested list ===
 
 # foo
  # bar
@@ -24,12 +26,12 @@
   # a little bit off indentation, but still level 3
 # meh
 
-== TODO list ==
+=== TODO list ===
 
 * [ ] foo
 * [.] bar
 
-== TODO nested list ==
+=== TODO nested list ===
 
 * [O] foo
   * [o] bar
@@ -41,27 +43,60 @@
     * [X] meh
         * [.] meh²
 
-== TODO invalid list ==
+=== TODO invalid list ===
 
-* [ ] foo 
+* [ ] foo
 * [z] zonk
 
-== Two separate lists (wrongly rendered by VimWiki engine) ==
+=== Two separate lists (wrongly rendered by VimWiki engine) ===
 
 1) foo
 
 1) bar
 
-== Two indented lists (wrongly rendered by VimWiki engine) ==
+=== Two indented lists (wrongly rendered by VimWiki engine) ===
 
 meh
 
   3. foo
 1. bar
 
-== Single list separated by indent (wrongly rendered by VimWiki engine) ==
+=== Single list separated by indent (wrongly rendered by VimWiki engine) ===
 
 2) foo
 1) bar
-   
+
 4) baz
+
+== Not supported yet ==
+
+=== Ordered list started with letters or roman numbers. ===
+
+Although they are supported in VimWiki, there is no much sense to implement
+and use them as all of them are rendered as ordered lists without any custom
+class to indicate they are letter-based or roman based numbers.
+
+- Letter based like `a) item`
+  a) Numbered list item 1
+  b) Numbered list item 2
+  c) Numbered list item 3
+- Same as above but uppercase
+  A) Numbered list item 1
+  B) Numbered list item 2
+  C) Numbered list item 3
+- Roman numbers like `i) item` (not sure if that means it should be
+  automatically numbered)
+  i) Numbered list item 1
+  ii) Numbered list item 2
+  iii) Numbered list item 3
+- Same as above but uppercase
+  I) Numbered list item 1
+  II) Numbered list item 2
+  III) Numbered list item 3
+
+=== Definitions ===
+
+Term 1:: Definition 1
+Term 2::
+:: Definition 2
+:: Definition 3

@@ -9,3 +9,5 @@
 - [[lists]]
 - [[links]]
 - [[tables]]
+- [[math|math formulae]]
+- [[blockquotes]]

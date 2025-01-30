@@ -1,0 +1,18 @@
+= Mathematical formulae =
+
+This one needs 3rd party software 
+[[https://en.wikipedia.org/wiki/MathJax|MathJax]]. I have zero intention for
+using it.
+
+== Inline ==
+
+Posuere. Quisque ac quam sed massa $ \sum_i a_i^2 = 1 $ adipiscing rutrum.
+Phasellus porta sapien. Maecenas venenatis tellus vel tellus.
+
+== Block ==
+
+{{$
+\sum_i a_i^2
+=
+1
+}}$

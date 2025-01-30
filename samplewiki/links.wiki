@@ -18,7 +18,7 @@
     flaw with handling env variables.
 - trailing slash means directory [[sub/|Other files]]
 - without trailing slash means simple wiki page [[sub/index|without slash it's just wiki page]]
-- anchors:
+- anchors (TODO):
   - [[T[odo List#Tomorrow|Tasks for tomorrow]]
   - [[#Tomorrow]]
 - raw urls:
