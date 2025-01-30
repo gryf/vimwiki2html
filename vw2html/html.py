@@ -1,5 +1,7 @@
 """
-This is kind of translation from vimwiki html export file to python
+This is kind of translation from vimwiki html export file to python. Well, not
+excact translation, for some portion of convertion implementation has been
+done from scratch.
 """
 import dataclasses
 import datetime
@@ -8,7 +10,6 @@ import logging
 import os
 import re
 import shutil
-import sys
 
 try:
     import pygments
@@ -102,6 +103,7 @@ re_html_links = re.compile(r'\[\[(?P<contents>'
                            r'[^]]*)\]\]')
 re_table_header_sep = re.compile(r'\s?:?-+:?\s?')
 
+
 class VimWiki2Html:
     """
     Represent single wiki file
@@ -119,13 +121,10 @@ class VimWiki2Html:
 
     template_ext = 'tpl'
 
-    def __init__(self, wikifname, path, path_html, template_path, template_ext,
-                 assets):
+    def __init__(self, wikifname, path, path_html, assets):
         self.assets = assets
         self.root = path
         self.template = None
-        self.template_path = template_path
-        self.template_ext = template_ext
         self.date = ''
         self.wiki_contents = None
         self.nohtml = False
@@ -209,29 +208,19 @@ class VimWiki2Html:
         # current state of converter
         self._state.math = [0, 0]  # [in_math, indent_math]
         self._state.deflist = 0
-        self._state.lists = []
         # [last seen header text in this level, number]
         self._state.header_ids = [['', 0], ['', 0], ['', 0],
                                   ['', 0], ['', 0], ['', 0]]
 
-        # TODO(gryf): merge this somehow with html.escape
-        # prepare constants for s_safe_html_line()
-        # #s_lt_pattern = '<'
-        # #s_gt_pattern = '>'
-        # defaults: 'b,i,s,u,sub,sup,kbd,br,hr' - those tags should not be
-        # touched
-        # if vimwiki#vars#get_global('valid_html_tags') !=? ''
-        #     tags = "\|".join([x.strip() for x in
-        #                       vimwiki_vars.get_global('valid_html_tags')
-        #                       .split(',')])
-        #     s_lt_pattern = '\c<\%(/\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?>\)\@!'
-        #     s_gt_pattern = '\c\%(</\?\%('.tags.'\)\%(\s\{-1}\S\{-}\)\{-}/\?\)\@<!>'
-
         self._previus_line = None
         for line in lsource:
             self._line_processed = False
+            list_lines = None
             header = re_header.match(line)
             if header:
+                list_lines = self._close_lists()
+                if list_lines:
+                    ldest.extend(list_lines)
                 ldest.append(self._parse_header(header))
                 self._previus_line = line
                 continue
@@ -241,6 +230,9 @@ class VimWiki2Html:
                 continue
 
             if re_hr.match(line):
+                list_lines = self._close_lists()
+                if list_lines:
+                    ldest.extend(list_lines)
                 ldest.append('<hr />')
                 self._previus_line = line
                 continue
@@ -266,7 +258,6 @@ class VimWiki2Html:
         close_arrow_quote(self._state.arrow_quote, lines)
         close_para(self._state.para, lines)
         close_math(self._state.math, lines)
-        # s_close_tag_list(self._state.lists, lines)
         lines.extend(self._close_lists())
         close_def_list(self._state.deflist, lines)
         #close_table(self._state.table, lines, self._state.header_ids)
@@ -360,8 +351,6 @@ class VimWiki2Html:
         ### quotes
         ##if !processed
         ##    [processed, lines, self._state.quote] = s_process_tag_precode(line, self._state.quote)
-        ##    if processed && len(self._state.lists)
-        ##        call s_close_tag_list(self._state.lists, lines)
         ##    if processed && self._state.deflist
         ##        self._state.deflist = close_def_list(self._state.deflist, lines)
         ##    if processed && self._state.arrow_quote
@@ -380,8 +369,6 @@ class VimWiki2Html:
         ##    [processed, lines, self._state.arrow_quote] = s_process_tag_arrow_quote(line, self._state.arrow_quote)
         ##    if processed && self._state.quote
         ##        self._state.quote = close_precode(self._state.quote, lines)
-        ##    if processed && len(self._state.lists)
-        ##        call s_close_tag_list(self._state.lists, lines)
         ##    if processed && self._state.deflist
         ##        self._state.deflist = close_def_list(self._state.deflist, lines)
         ##    if processed && len(self._state.table)
@@ -499,13 +486,14 @@ class VimWiki2Html:
         open_level = open_level.strip()
         close_level = close_level.strip()
         if open_level != close_level:
-            LOG.warning(f"Header open level doesn't match close level: "
-                        f"'{open_level}' vs '{close_level}'.")
+            LOG.warning("Header open level doesn't match close level in `%s`: "
+                        "`%s' vs `%s'.", self.wiki_fname, open_level,
+                        close_level)
             return line_match.string
         level = len(open_level)
         if level > self.max_header_level:
-            LOG.warning("Headers cannot exceed %s level.",
-                        self.max_header_level)
+            LOG.warning("Headers in `%s'cannot exceed `%s` level.",
+                        self.wiki_fname, self.max_header_level)
             return line_match.string
 
         title = _id = line_match["title"].strip()
@@ -607,18 +595,13 @@ class VimWiki2Html:
 
         The argument for the %template placeholder should be name of the file
         without a path (root of the vimwiki) and extension (.tpl by defult).
-        For now it's calculated using self.root as the vimwiki root directory.
-
         """
-        # TODO: change that to use configured template path instead of src
-        #       wiki root.
         result = re_ph_template.search(self.wiki_contents)
 
         if not result:
             return
 
-        template_fname = result.groups()[0].strip() + self.template_ext
-        self.template = os.path.join(self.template_path, template_fname)
+        self.template = result.groups()[0].strip()
         self.wiki_contents = re_ph_template.sub('\n', self.wiki_contents)
 
     def _find_date(self):
@@ -658,10 +641,7 @@ class VimWiki2Html:
 
         # wiki links
         for link in re_wiki_links.finditer(line):
-            try:
-                link = self._get_link_out_of_string(link.groupdict()['contents'])
-            except:
-                raise
+            link = self._get_link_out_of_string(link.groupdict()['contents'])
             line = re_wiki_links.sub(self.links_mark.format(len(self._links)),
                                      line, count=1)
             self._links.append(link)
@@ -700,7 +680,7 @@ class VimWiki2Html:
         if dest.lower().startswith('http'):
             return template % dest
 
-        LOG.warning('Image "%s" have no schema', dest)
+        LOG.warning("Image `%s' in `%s' have no schema", dest, self.wiki_fname)
         img = self._copy_asset(dest)
         return template % dest
 
@@ -717,7 +697,8 @@ class VimWiki2Html:
             return img
 
         if not os.path.exists(os.path.join(self.root, filepath)):
-            LOG.warning("File `%s' doesn't exists, ignoring", img)
+            LOG.warning("File `%s' in `%s' doesn't exists, ignoring", img,
+                        self.wiki_fname)
             return img
 
         fullpath = os.path.join(self.root, filepath)
@@ -1046,14 +1027,6 @@ def safe_html_preformatted(line):
 
 def s_escape_html_attribute(string):
     return string.replace('"', '&quot;')
-
-
-def s_safe_html_line(line):
-    """
-    escape & < > when producing HTML text using g:vimwiki_valid_html_tags for
-    exepctions
-    """
-    return re_safe_html.sub('&lt;\\1&gt;', line).replace('&', '&amp;')
 
 
 def s_mid(value, cnt):
@@ -1826,64 +1799,3 @@ def close_def_list(deflist, ldest):
 #
 #    ##    processed = 1
 #    return [processed, line]
-#
-#
-#def process_table(line, table, header_ids):
-#    def table_empty_cell(value):
-#        cell = {}
-#
-#        #if value =~# '^\s*\\/\s*$'
-#        #    cell.body        = ''
-#        #    cell.rowspan = 0
-#        #    cell.colspan = 1
-#        #elseif value =~# '^\s*&gt;\s*$'
-#        #    cell.body        = ''
-#        #    cell.rowspan = 1
-#        #    cell.colspan = 0
-#        #elseif value =~# '^\s*$'
-#        #    cell.body        = '&nbsp;'
-#        #    cell.rowspan = 1
-#        #    cell.colspan = 1
-#        #else
-#        #    cell.body        = value
-#        #    cell.rowspan = 1
-#        #    cell.colspan = 1
-#
-#        return cell
-#
-#    def table_add_row(table, line):
-#        #if empty(table)
-#        #    if line =~# '^\s\+'
-#        #        row = ['center', []]
-#        #    else
-#        #        row = ['normal', []]
-#        #else
-#        #    row = [[]]
-#        return row
-#
-#    table = table
-#    lines = []
-#    processed = 0
-#
-#    #if vimwiki#tbl#is_separator(line)
-#    #    call extend(table, table_add_row(table, line))
-#    #    processed = 1
-#    #elseif vimwiki#tbl#is_table(line)
-#    #    call extend(table, table_add_row(table, line))
-#
-#    #    processed = 1
-#    #    # cells = split(line, vimwiki#tbl#cell_splitter(), 1)[1: -2]
-#    #    cells = vimwiki#tbl#get_cells(line)
-#    #    call map(cells, 'table_empty_cell(v:val)')
-#    #    call extend(table[-1], cells)
-#    #else
-#    #    table = close_table(table, lines, header_ids)
-#    return [processed, lines, table]
-
-
-def convert_file(wikifile, path, path_html, template_path, template_ext,
-                 assets):
-    vwtohtml = VimWiki2Html(wikifile, path, path_html, template_path,
-                            template_ext, assets)
-    vwtohtml.convert()
-    return vwtohtml
