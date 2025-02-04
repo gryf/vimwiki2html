@@ -82,7 +82,7 @@ possible options are listed below:
    # Directory to the vimwiki root path. Can contain ~/ or env variables.
    path = ''
    # Directory to the output path. Can contain ~/ or env variables. if not
-   # provided it will be created as adding _html suffix for whatever directory 
+   # provided it will be created as adding _html suffix for whatever directory
    # is set on path.
    path_html = ''
    # Main file without extension. Usually index.
@@ -152,7 +152,8 @@ appropriate one.
 Conversion state
 ----------------
 
-What's supported:
+What's supported
+''''''''''''''''
 
 - Typefaces
 
@@ -180,23 +181,29 @@ What's supported:
 - Horizontal line
 - Placeholders
 
-  - Title
-  - Date
-  - Template
-  - Nohtml
+  - ``%title``
+  - ``%date``
+  - ``%template``
+  - ``%nohtml``
 
-  - Plainhtml (this one is undocumented, and allows to add explicit html tags
-    which follows that placeholder. It's inline only, which means no span on
-    multiple lines, although this placeholder can be repeated several times)
+  - ``%plainhtml`` (this one is undocumented, and allows to add explicit html
+    tags which follows that placeholder. It's inline only, which means no span
+    on multiple lines, although this placeholder can be repeated several times)
 
-  - Css - this one is undocumented as well, and allows to add css filename.
-    Note, that css file will be copied to the root of vimwiki regardless of
-    it's placement on filesystem
+  - Template placeholders
+
+    - ``%root_path%``
+    - ``%title%``
+    - ``%date%``
+    - ``%content%``
+    - ``%css%`` - this one is undocumented as well, and allows to add css
+      filename. Note, that css file will be copied to the root of vimwiki
+      regardless of it's placement on filesystem
 
 - Links
 
   - Diary
-  - wikilinks (absolute/relative/plain/anchors)
+  - wikilinks (absolute/relative/plain)
   - external links (local/remote/bare)
 
   - transclusion links (or, image tags, as no other are supported on vimwiki)
@@ -210,13 +217,23 @@ What's supported:
   - tables with headers
   - columns and rows spanning
 
-What's not:
+- Explicit html tags (supported tag list: ``b``, ``i``, ``s``, ``u``, ``sub``,
+  ``sup``, ``kbd``, ``br`` and ``hr``).
+- Escape other HTML tags
+
+What's not
+''''''''''
+
+- Placeholders
+
+  - Template placeholders
+
+    - ``%wiki_path%``
 
 - Links:
 
   - interwiki links
-  - wiki and local links are messed up at the moment, all of them are at the
-    same level (i.e. *root* level, TBD)
+  - anchor links are messed up at the moment, TBD
 
 - Lists:
 
@@ -257,14 +274,17 @@ What's not:
 
 - Tables
 
-  - no aligning for the columns (``VimWiki2HTML`` doesn't do that either)
+  - no aligning for the columns (``VimWiki2HTML`` doesn't do that either, TBD)
 
 - Mathematical formulae (both - inline and block)
 - Blockquotes
 - Tags
-- Explicit html tags (default list is ``b``, ``i``, ``s``, ``u``, ``sub``,
-  ``sup``, ``kbd``, ``br`` and ``hr``).
-- Escape HTML tags but the one excluded
+- Configurable explicit html tags (besides default list)
+
+
+Things on the non supported list is either second priority things (anchors
+definitely need to be fixed) and things, which I have no interested in.
+
 
 License
 -------

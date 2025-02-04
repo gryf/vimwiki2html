@@ -1,7 +1,7 @@
 import argparse
 import logging
+import multiprocessing
 import os
-import pathlib
 import shutil
 import sys
 import tomllib
@@ -185,24 +185,51 @@ class VimWiki2HTMLConverter:
             shutil.copy(self.css_name, self.path_html)
             # TODO: copy assets from CSS too
 
-        for filepath in self._sources:
-            wiki_obj = vw2html.html.VimWiki2Html(filepath, self.path,
-                                                 self.path_html, self.assets)
-            source_mtime = 1
-            dest_mtime = 0
-            try:
-                source_mtime = os.stat(filepath).st_mtime
-                dest_mtime = os.stat(wiki_obj.html_fname).st_mtime
-            except OSError:
-                pass
+        try:
+            with multiprocessing.Pool() as p:
+                try:
+                    result = p.map_async(self._convert, tuple(self._sources))
+                    result.get(10)  # wait up to ten seconds for convertion
+                                    # to finish
 
-            if (source_mtime > dest_mtime) or self.force:
-                # convert only when:
-                # - conversion is forced
-                # - source modify time is newer then destination
-                wiki_obj.convert()
-                with open(wiki_obj.html_fname, 'w') as fobj:
-                    fobj.write(self._apply_data_to_template(wiki_obj))
+                except multiprocessing.context.TimeoutError:
+                    LOG.error("Processing files took abnormally long, still "
+                              "trying to finish the process, you might use "
+                              "Ctrl+C to abort the conversion")
+                    wait_time = 1
+                    while True:
+                        try:
+                            result.get(wait_time)
+                            break
+                        except multiprocessing.context.TimeoutError:
+                            wait_time *= 2
+                            LOG.error("Still trying… waiting another %s "
+                                      "seconds", wait_time)
+                            continue
+            return 0
+        except KeyboardInterrupt:
+            LOG.error("Interrupted, conversion is not complete")
+            return 1
+
+    def _convert(self, filepath):
+        wiki_obj = vw2html.html.VimWiki2Html(filepath, self.path,
+                                             self.path_html, self.assets)
+        source_mtime = 1
+        dest_mtime = 0
+        try:
+            source_mtime = os.stat(filepath).st_mtime
+            dest_mtime = os.stat(wiki_obj.html_fname).st_mtime
+        except OSError:
+            pass
+
+        #time.sleep(0.5)
+        if (source_mtime > dest_mtime) or self.force:
+            # convert only when:
+            # - conversion is forced
+            # - source modify time is newer then destination
+            wiki_obj.convert()
+            with open(wiki_obj.html_fname, 'w') as fobj:
+                fobj.write(self._apply_data_to_template(wiki_obj))
 
         return 0
 
@@ -216,6 +243,7 @@ class VimWiki2HTMLConverter:
                     self.assets.append(_fname)
 
     def read_config(self, config_file, source):
+        potential_path = None
         if self.path:
             potential_path = self.path
         if source:
@@ -256,7 +284,7 @@ class VimWiki2HTMLConverter:
         elif toml.get('vimwiki',
                       []) and toml['vimwiki'] and toml['vimwiki'][0]:
             # just get the first one
-            conf_dict = ['vimwiki'][0].get(key)
+            conf_dict = toml['vimwiki'][0]
             for key in legal_keys:
                 if conf_dict.get(key):
                     if key in ['css_name', 'path', 'path_html',
