@@ -11,23 +11,23 @@ Motivation
 I wanted to have some more control over how HTML files are generated and how
 asset files are treated. Also in some really large files, I've noticed
 ``Vimwiki2HTML`` can be really slow. Currently I have around 750 wiki files.
-Some of them are pretty small, yet some of them are complicated, full of
-tables, code blocks and lists. Below is a simple benchmark I've done to convert
-whole wiki collection into html using vimwiki ``VimwikiAll2HTML`` command:
+Some of them are pretty small, yet some of them are complex, full of tables,
+code blocks and lists. Below is a simple benchmark I've done to convert whole
+wiki collection into html using vimwiki ``VimwikiAll2HTML`` command:
 
 .. code:: console
 
-   $ time vim -s s
+   $ time vim -s script.vim
 
    real	2m33,027s
    user	2m17,865s
    sys	0m6,750s
-   $ cat s
+   $ cat script.vim
    :VimwikiIndex
    :VimwikiAll2HTML
    :q!
 
-Two and a half minutes.
+And yes, it took two and a half minutes to build whole wiki as HTML.
 
 Let see how Python implementation performs. Currently it have most of features
 I need (see the functionality coverage below):
@@ -42,18 +42,26 @@ I need (see the functionality coverage below):
    html.py:703: WARNING: Image "Nerd Font" have no schema
    html.py:720: WARNING: File `Nerd Font' doesn't exists, ignoring
 
+   real 0m0,428s
+   user 0m2,173s
+   sys  0m0,608s
+
+Besides some basic info/warning about potential issues and copying all needed
+files (including images and linked static non-wiki files), it took less than
+second thanks to parallel conversion - although with single thread it still
+take under 1 second:
+
+.. code:: console
+
    real	0m0,873s
    user	0m0,683s
    sys	0m0,182s
-
-Besides some basic info/warning about potential issues, it took less than
-second. That also includes copying asset files into destination.
 
 
 Requirements
 ------------
 
-The only requirement is Python 3.11 or higher.
+The only requirement is Python 3.12 or higher.
 
 Installation
 ------------
