@@ -36,6 +36,10 @@ class VimWiki2HTMLConverter:
     template_ext: str = '.tpl'
     # Style file will be copied to path_html
     css_name: str = None # 'style.css'
+    # usually it's desired to use async for gaining advantage of multicore
+    # processors, but for debugging it might be better to turn it off and make
+    # conversion sequentially
+    convert_async: bool = True
 
     # converter specific defaults
     # force recreate/convert all wiki files passed to the converter
@@ -185,6 +189,13 @@ class VimWiki2HTMLConverter:
             shutil.copy(self.css_name, self.path_html)
             # TODO: copy assets from CSS too
 
+        # run conversion sequentially
+        if not self.convert_async:
+            for filepath in self._sources:
+                self._convert(filepath)
+            return 0
+
+        # or use async pool
         try:
             with multiprocessing.Pool() as p:
                 try:
@@ -262,7 +273,7 @@ class VimWiki2HTMLConverter:
 
         legal_keys = ["css_name", "ext", "index", "path_html",
                       "template_default", "template_default", "template_ext",
-                      "template_path", 'path', 'force']
+                      "template_path", 'path', 'force', 'convert_async']
 
         conf_dict = {}
         if potential_path:
@@ -275,18 +286,17 @@ class VimWiki2HTMLConverter:
                     break
         if conf_dict:
             for key in legal_keys:
-                if conf_dict.get(key):
+                if key in conf_dict:
                     if key in ['css_name', 'path', 'path_html',
                                'template_path']:
                         setattr(self, key, abspath(conf_dict[key]))
                     else:
                         setattr(self, key, conf_dict[key])
-        elif toml.get('vimwiki',
-                      []) and toml['vimwiki'] and toml['vimwiki'][0]:
+        elif toml.get('vimwiki') and toml['vimwiki'] and toml['vimwiki'][0]:
             # just get the first one
             conf_dict = toml['vimwiki'][0]
             for key in legal_keys:
-                if conf_dict.get(key):
+                if key in conf_dict:
                     if key in ['css_name', 'path', 'path_html',
                                'template_path']:
                         setattr(self, key, abspath(conf_dict[key]))
