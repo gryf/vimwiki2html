@@ -299,6 +299,7 @@ class VimWiki2Html:
 
         self._previus_line = None
         for line in lsource:
+
             self._line_processed = False
             list_lines = None
             header = re_header.match(line)
@@ -900,7 +901,7 @@ class VimWiki2Html:
         return re_safe_html.sub('&lt;\\1&gt;', line)
 
     def _handle_tables(self, line):
-        if not re.match(r'^\|.+\|$', line):
+        if not re.match(r'^\s*\|.+\|\s*$', line):
             if self._table:
                 # close table
                 lines = [self._table.render()]
@@ -912,6 +913,7 @@ class VimWiki2Html:
         line = self._apply_attrs(line)
         if not self._table:
             self._table = Table()
+            self._table.centered = line.startswith(' ')
         # remove first and last |, split it to have contents
         self._table.add_rows(line.strip()[1:-1].split('|'))
 
