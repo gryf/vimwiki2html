@@ -1,25 +1,50 @@
 = Horizontal rules =
 
-legal one, 4 dashes:
+== Correct ==
+
+4 dashes:
+{{{
+----
+}}}
 
 ----
 
 more than 4 dashes:
+{{{
+--------------------
+}}}
 
 --------------------
 
+== Incorrect ==
+
 trailing space:
+{{{
+----- 
+}}}
 
 ----- 
 
 leading space:
 
+{{{
+ -----
+}}}
+
  -----
 
 extra characters:
 
+{{{
+-----foo
+}}}
+
 -----foo
 
 not enough hypens:
+
+{{{
+---
+}}}
 
 ---

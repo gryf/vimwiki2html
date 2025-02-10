@@ -2,12 +2,25 @@
 
 == Table with spanning ==
 
+{{{
+| a  | b  | c | d |
+| \/ | e  | > | f |
+| \/ | \/ | > | g |
+| h  | >  | > | > |
+}}}
+
 | a  | b  | c | d |
 | \/ | e  | > | f |
 | \/ | \/ | > | g |
 | h  | >  | > | > |
 
 == table with headers ==
+
+{{{
+| this is | a simple | table |
+|---------|----------|-------|
+| and     | some     | data  |
+}}}
 
 | this is | a simple | table |
 |---------|----------|-------|
@@ -16,6 +29,14 @@
 == Alignment ==
 
 (doesn't render right for whatever reason on Vimwiki engine)
+
+{{{
+| normal (typically left aligned)  |       center       | right aligned |
+|----------------------------------|:------------------:|--------------:|
+| and                              |        some        |          data |
+| lorem                            |       ipsum        |         data2 |
+| Nullam nibh libero, sagittis vel | varius dictum nisl | nisl non augu |
+}}}
 
 | normal (typically left aligned)  |       center       | right aligned |
 |----------------------------------|:------------------:|--------------:|
@@ -27,6 +48,14 @@
 
 This isn't described on docs, yet when put any space before first (or all) 
 `|` table will be centered.
+
+{{{
+ | Date       |  Item  |   Price |
+|------------|:------:|--------:|
+| yest       | Coffee |  $15.00 |
+| 2017-02-13 |  Tea   |   $2.10 |
+| 2017-03-14 |  Cake  | $143.12 |
+}}}
 
  | Date       |  Item  |   Price |
 |------------|:------:|--------:|

@@ -1,30 +1,53 @@
 = headers =
 
 header with line break (shouldn't render):
+{{{
+=new
+line=
+}}}
 
 =new
 line=
 
 header with extra space in title break (should render):
+{{{
+===    extraspace ===
+}}}
 
 ===    extraspace ===
 
 header level 6 without space around text (should render):
+{{{
+======title level 6======
+}}}
 
 ======title level 6======
 
 header with extra equal signs inside (should render):
+{{{
+== ti==tle ==
+}}}
 
 == ti==tle ==
 
 header level 7 - illegal on html (shouldn't render):
+{{{
+======= title level 7 =======
+}}}
 
 ======= title level 7 =======
 
 header with unbalanced number of equal signs (shouldn't render):
+{{{
+===== unbalanced equal sign ====
+}}}
 
 ===== unbalanced equal sign ====
 
 header with attributes (italic, bold and crossed out) (should render):
+
+{{{
+== header with _italic_ *bold* ~~and crossed~~ ==
+}}}
 
 == header with _italic_ *bold* ~~and crossed~~ ==

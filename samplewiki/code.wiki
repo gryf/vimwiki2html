@@ -35,7 +35,7 @@ if __name__ == "__main__":
     app.run()
 }}}
 - code with several withespace around text (manually centered)
-{{{
+  {{{
             Ac elit. Nullam tincidunt ligula vitae nulla.
          Vivamus sit amet risus et ipsum viverra malesuada.
               Vestibulum tortor. Pellentesque purus.
@@ -61,8 +61,8 @@ dolor.
 x }}}
 }}}
 - Any character but the whitespace, preceding opening block code will create 
-  simple paragraph not the code block:
-foo {{{
+  simple paragraph not the code block:<br/>
+  foo {{{
 Cursus posuere. Morbi bibendum facilisis eros. Phasellus aliquam sapien in 
 erat. Praesent venenatis diam dignissim dui. Praesent risus erat, iaculis ac, 
 dapibus sed, imperdiet ac, erat. Nullam sed ipsum. Phasellus non dolor. Donec 

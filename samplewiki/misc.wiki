@@ -2,14 +2,31 @@
 
 == Test comment ==
 
+{{{
+
+%% this is a comment
+  %% even space before '%%' should be treated as comment
+
+}}}
+
 (should be nothing below)
 
 %% this is a comment
   %% even space before '%%' should be treated as comment
 
-athough, if put something before %% it will should not be treaded as a comment.
+athough, if put something before %% it will should not be treated as a comment.
 
 == Multiline comments ==
+
+{{{
+Pharetra  rhoncus *massa. %%+Cras et* ligula vel quam
+tristique commodo. Sed est lectus, mollis quis, lacinia nec,
+
++%%Vestibulum _ante `ipsum primis %%+in_ faucibus` orci
+luctus et ultrices posuere cubilia Curae;
+Morbi urna dui,
+fermentum quis, feugiat imperdiet, imperdiet id, +%%sapien.
+}}}
 
 Pharetra  rhoncus *massa. %%+Cras et* ligula vel quam
 tristique commodo. Sed est lectus, mollis quis, lacinia nec,

@@ -2,47 +2,64 @@
 
 == valid ==
 
-- plain wiki link [[This is a link]]
-- same with description [[This is a link source|Description of the link]]
-- nested [[projects/Important Project 1]]
-- relative [[../index]]
+- plain wiki link `[[This is a link]]` [[This is a link]]
+- same with description `[[This is a link source|Description of the link]]`
+  [[This is a link source|Description of the link]]
+- nested `[[projects/Important Project 1]]` [[projects/Important Project 1]]
+- relative `[[../index]]` [[../index]]
 - relative:
-  - within wiki root [[/index]]
-  - relative directory [[allegro/../]]
+  - within wiki root `[[/index]]` [[/index]]
+  - relative directory `[[allegro/../]]` [[allegro/../]]
 - absolute:
-  - [[///tmp/in_root_tmp]]
-  - [[//~/.bashrc]] - this one will search for `.bashrc.html` so those are 
-    meant for wiki files, not regular one. For those, look below for external 
+  - `[[///tmp/in_root_tmp]]` [[///tmp/in_root_tmp]]
+  - `[[//~/.bashrc]]` - this one will search for `.bashrc.html` so those are
+    meant for wiki files, not regular one. For those, look below for external
     links.
-  - [[//$HOME/.bashrc]] - this one is broken on VimWiki parser, possibly some 
-    flaw with handling env variables.
-- trailing slash means directory [[sub/|Other files]]
-- without trailing slash means simple wiki page [[sub/index|without slash it's just wiki page]]
+  - `[[//$HOME/.bashrc]]` [[//$HOME/.bashrc]] - this one is broken on VimWiki
+    parser, possibly some flaw with handling env variables.
+- trailing slash means directory `[[sub/|Other files]]` [[sub/|Other files]]
+- without trailing slash means simple wiki page
+  `[[sub/index|without slash it's just wiki page]]`
+  [[sub/index|without slash it's just wiki page]]
 - anchors (TODO):
-  - [[T[odo List#Tomorrow|Tasks for tomorrow]]
-  - [[#Tomorrow]]
+  - `[[Todo List#Tomorrow|Tasks for tomorrow]]`
+    [[Todo List#Tomorrow|Tasks for tomorrow]]
+  - `[[#Tomorrow]]` [[#Tomorrow]]
 - raw urls:
-  - https://github.com/vimwiki/vimwiki.git
-  - mailto:habamax@gmail.com
-  - ftp://vim.org
+  - `https://github.com/vimwiki/vimwiki.git`
+    https://github.com/vimwiki/vimwiki.git
+  - `mailto:habamax@gmail.com` mailto:habamax@gmail.com
+  - `ftp://vim.org` ftp://vim.org
 - External links:
-  - [[file:/home/somebody/a/b/c/music.mp3]]
-  - [[file:C:/Users/somebody/d/e/f/music.mp3]]
-  - [[file:~/a/b/c/music.mp3]]
-  - [[file:../assets/data.csv|Important Data]]
-  - [[local:C:/Users/somebody/d/e/f/music.mp3]]
-  - [[file:/home/user/documents/|Link to a directory]]
+  - `[[file:/home/somebody/a/b/c/music.mp3]]` 
+    [[file:/home/somebody/a/b/c/music.mp3]]
+  - `[[file:C:/Users/somebody/d/e/f/music.mp3]]`
+    [[file:C:/Users/somebody/d/e/f/music.mp3]]
+  - `[[file:~/a/b/c/music.mp3]]` [[file:~/a/b/c/music.mp3]]
+  - `[[file:../assets/data.csv|Important Data]]`
+    [[file:../assets/data.csv|Important Data]]
+  - `[[local:C:/Users/somebody/d/e/f/music.mp3]]`
+    [[local:C:/Users/somebody/d/e/f/music.mp3]]
+  - `[[file:/home/user/documents/|Link to a directory]]`
+    [[file:/home/user/documents/|Link to a directory]]
 - Transclusions
-  - {{file:../../images/vimwiki_logo.png|inclusion of nonexisting image}} 
-  - external link to image: {{https://git.vimja.com/gryf/wmamixer/raw/branch/master/images/wmamixer.gif}}
-  - nested within local link (`file:` schema) [[file:images/plane.jpg|{{file:images/plane_small.jpg}}]]
-  - no schema, even though there is no word on support it in docs 
+  - `{{file:../../images/vimwiki_logo.png|inclusion of nonexisting image}}`
+    {{file:../../images/vimwiki_logo.png|inclusion of nonexisting image}}
+  - external link to image: 
+    `{{https://git.vimja.com/gryf/wmamixer/raw/branch/master/images/wmamixer.gif}}`
+    {{https://git.vimja.com/gryf/wmamixer/raw/branch/master/images/wmamixer.gif}}
+  - nested within local link (`file:` schema)
+    `[[file:images/plane.jpg|{{file:images/plane_small.jpg}}]]`
+    [[file:images/plane.jpg|{{file:images/plane_small.jpg}}]]
+  - no schema, even though there is no word on support it in docs
+    `{{images/spring.jpg|Spring}}`
     {{images/spring.jpg|Spring}}
 - Diary
-  - [[diary:2012-03-05]]
-  - [[diary:2012-03-05|diary with description]]
+  - `[[diary:2012-03-05]]` [[diary:2012-03-05]]
+  - `[[diary:2012-03-05|diary with description]]`
+    [[diary:2012-03-05|diary with description]]
 
 == illegal ==
 
-- multiline link: [[https://foo.bar.baz| Mi cursus commodo. Morbi congue 
-  mauris ac sapien.]]
+- link which spans/breaks multiple lines: [[https://foo.bar.baz| Mi cursus
+  commodo. Morbi congue mauris ac sapien.]]

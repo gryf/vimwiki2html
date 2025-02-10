@@ -4,9 +4,19 @@
 
 === Unordered list with single item ===
 
+{{{
+* foo
+}}}
+
 * foo
 
 === Three element unordered list ===
+
+{{{
+- foo
+- bar
+- baz
+}}}
 
 - foo
 - bar
@@ -14,11 +24,25 @@
 
 === Unordered nested list ===
 
+{{{
+# foo
+ # bar
+# baz
+}}}
+
 # foo
  # bar
 # baz
 
 === Unordered even more nested list ===
+
+{{{
+# foo
+ # bar
+   another line for second level
+  # a little bit off indentation, but still level 3
+# meh
+}}}
 
 # foo
  # bar
@@ -28,10 +52,27 @@
 
 === TODO list ===
 
+{{{
+* [ ] foo
+* [.] bar
+}}}
+
 * [ ] foo
 * [.] bar
 
 === TODO nested list ===
+
+{{{
+* [O] foo
+  * [o] bar
+    * [X] subar
+      * [X] subsubar
+    * [X] second subar
+    * [ ] third subar
+  * [X] baz
+    * [X] meh
+        * [.] meh²
+}}}
 
 * [O] foo
   * [o] bar
@@ -45,16 +86,34 @@
 
 === TODO invalid list ===
 
+{{{
+* [ ] foo
+* [z] zonk
+}}}
+
 * [ ] foo
 * [z] zonk
 
 === Two separate lists (wrongly rendered by VimWiki engine) ===
+
+{{{
+1) foo
+
+1) bar
+}}}
 
 1) foo
 
 1) bar
 
 === Two indented lists (wrongly rendered by VimWiki engine) ===
+
+{{{
+meh
+
+  3. foo
+1. bar
+}}}
 
 meh
 
@@ -63,9 +122,16 @@ meh
 
 === Single list separated by indent (wrongly rendered by VimWiki engine) ===
 
+{{{
 2) foo
 1) bar
+   (there are 3 leading spaces)
+4) baz
+}}}
 
+2) foo
+1) bar
+   
 4) baz
 
 == Not supported yet ==
@@ -95,6 +161,13 @@ class to indicate they are letter-based or roman based numbers.
   III) Numbered list item 3
 
 === Definitions ===
+
+{{{
+Term 1:: Definition 1
+Term 2::
+:: Definition 2
+:: Definition 3
+}}}
 
 Term 1:: Definition 1
 Term 2::

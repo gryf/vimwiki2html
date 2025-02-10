@@ -2,7 +2,14 @@
 
 == Indented ==
 
-Text which starts with 4 or more spaces is a blockquote.
+Text which starts with 4 or more spaces is a blockquote. Cannot have
+paragraphs.
+
+{{{
+    This would be a blockquote in Vimwiki. It is not highlighted in Vim but
+    could be styled by CSS in HTML. Blockquotes are usually used to quote a
+    long piece of text from another source.
+}}}
 
     This would be a blockquote in Vimwiki. It is not highlighted in Vim but
     could be styled by CSS in HTML. Blockquotes are usually used to quote a
@@ -13,6 +20,15 @@ Text which starts with 4 or more spaces is a blockquote.
 A group of lines prefixed with > also specifies a blockquote, with the caveat
 that the `>` syntax allow empty lines to signal multiple paragraphs.
 
+{{{
+> This also signals a block quote.
+
+> You can use empty lines to signal multiple paragraphs kept inside the same
+> blockquote
+
+> if that would work
+}}}
+
 > This also signals a block quote.
 
 > You can use empty lines to signal multiple paragraphs kept inside the same
@@ -20,17 +36,6 @@ that the `>` syntax allow empty lines to signal multiple paragraphs.
 
 > if that would work
 
-> them.
-> Sem. Mauris volutpat congue risus. Curabitur leo. Aenean tempor tortor eget 
-> ligula. Aenean vel augue. Vestibulum ac justo. In hac habitasse platea 
-> dictumst. Nam dignissim nisi non mauris. Donec et tortor. Morbi felis. Donec 
-> aliquet, erat eu ultrices tincidunt, lorem mi sagittis lectus, ut feugiat pede 
-> lacus quis sapien. Suspendisse porta, felis a fermentum interdum, dui nisl 
-> sodales felis, ut fermentum sapien nibh eu nunc.
-> 
-> Lorem ipsum dolor sit amet. Integer sed magna. Duis nisl nulla, porta ut, 
-> molestie sit amet, tincidunt eu, enim. Cras eu mauris. Cras iaculis, nisi vel 
-> tempor fringilla, nisl dolor imperdiet dolor, id lobortis ligula nunc sed.
-
-There is sever bug in handling blockquote like the above. Currently vimwiki 
-ignores paragraphs and renders silly `>` in even lines.
+That suppose to be a single block quote with 3 paragraphs, although there is
+severe bug in handling blockquote like the above. Currently vimwiki ignores
+paragraphs and renders silly `>` in even lines.
