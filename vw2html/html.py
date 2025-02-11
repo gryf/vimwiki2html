@@ -68,6 +68,7 @@ class Cell:
         self.colspan = 1
         self.text = text
         self.header = False
+        self.align = None
 
     def __repr__(self):
         rspan = cspan = ''
@@ -76,7 +77,10 @@ class Cell:
         if self.colspan > 1:
             cspan = f' colspan="{self.colspan}"'
         td = 'th' if self.header else 'td'
-        return f"<{td}{rspan}{cspan}>{self.text}</{td}>"
+        css_class = ''
+        if self.align:
+            css_class = f' class="cell-{self.align}"'
+        return f"<{td}{rspan}{cspan}{css_class}>{self.text}</{td}>"
 
 
 class Table:
@@ -84,6 +88,7 @@ class Table:
         self.centered = False
         self.rows = []
         self.first_row_header = False
+        self._align = []
 
     def render(self):
         self._scan_table()
@@ -114,6 +119,13 @@ class Table:
         if (all(re_table_header_sep.match(x) for x in row_list) and
             len(self.rows) == 1):
             self.first_row_header = True
+            for row in row_list:
+                if row.startswith(':') and row.endswith(':'):
+                    self._align.append('center')
+                elif row.endswith(':'):
+                    self._align.append('right')
+                else:
+                    self._align.append('left')
             return
         self.rows.append(row_list)
 
@@ -122,6 +134,9 @@ class Table:
 
         for x, row in enumerate(self.rows):
             for y, item in enumerate(row):
+                alignment = None
+                if self._align:
+                    alignment = self._align[y]
                 if item.strip() == '\\/':
                     counter = 0
                     while counter is not None and x - counter >= 0:
@@ -143,6 +158,8 @@ class Table:
                     continue
 
                 c = Cell(item)
+                if alignment and alignment != 'left':
+                    c.align = alignment
                 if self.first_row_header and x == 0:
                     c.header = True
                 table[x][y] = c
