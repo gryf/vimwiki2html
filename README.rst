@@ -8,12 +8,18 @@ syntax into html.
 Motivation
 ----------
 
-I wanted to have some more control over how HTML files are generated and how
-asset files are treated. Also in some really large files, I've noticed
-``Vimwiki2HTML`` can be really slow. Currently I have around 750 wiki files.
-Some of them are pretty small, yet some of them are complex, full of tables,
-code blocks and lists. Below is a simple benchmark I've done to convert whole
-wiki collection into html using vimwiki ``VimwikiAll2HTML`` command:
+My main motivation is to be able to deploy output of the ``VimwikiAll2HTML`` to
+somewhere else, either to use it directly on local filesystem, rsync it to some
+of other machines or even expose it via webserver. With that assumption I've
+noticed it might be somewhat troublesome with current design especially when
+dealing with asset files, which are not stored on ``~/vimwiki_html``, but
+rather are simply linked to ``~/vimwiki`` path.
+
+Also in some really large files, I've noticed ``Vimwiki2HTML`` can be really
+slow. Currently I have around 750 wiki files.  A lot of them are pretty small,
+yet some of them are complex, full of tables, code blocks and lists. Below is a
+simple benchmark I've done to convert whole wiki collection into html using
+vimwiki ``VimwikiAll2HTML`` command:
 
 .. code:: console
 
