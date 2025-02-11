@@ -364,8 +364,7 @@ def parse_args():
     parser.add_argument('-f', '--force', action='store_true', help="Convert "
                         "all files even if source seems unchanged")
     logging.basicConfig(level=logging.DEBUG,
-                        format='%(filename)s:%(lineno)d: %(levelname)s: '
-                        '%(message)s')
+                        format='%(levelname)s: %(message)s')
 
     return parser.parse_args()
 

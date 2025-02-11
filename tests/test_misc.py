@@ -210,4 +210,4 @@ class TestPlainHTMLPlaceholder(unittest.TestCase):
         with mock.patch("builtins.open", mock_open):
             self.converter.convert()
         self.assertEqual(self.converter.html,
-                         '<div>\n<p>\nmeh\n</p>\n<i>bar</i>')
+                         '<div>\n<p>\nmeh\n<i>bar</i>\n</p>')
