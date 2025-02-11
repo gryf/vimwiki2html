@@ -28,7 +28,11 @@
 
 == Alignment ==
 
-(doesn't render right for whatever reason on Vimwiki engine)
+Note, that even if it's documented on Vimwiki help page, and it's conveniently
+aligned on the wiki itself, Vimwiki2HTML doesn't render it at all - no class,
+nor other attributes are applied to the cells. Fortunately, it was rather easy
+to implement, and `vw2html` adds appropriate classes for cells (`cell-center`
+and `cell-right` are used, while default left is left classless).
 
 {{{
 | normal (typically left aligned)  |       center       | right aligned |
@@ -46,8 +50,10 @@
 
 == Centered table ==
 
-This isn't described on docs, yet when put any space before first (or all) 
-`|` table will be centered.
+This isn't described on docs, yet when put any space before first (or all) `|`
+table will be centered. Of course, depending on the CSS class `center`
+definition, it might be whatever it desired to be - centered, stretched to the
+container boundaries, special cell rendering and so on.
 
 {{{
  | Date       |  Item  |   Price |

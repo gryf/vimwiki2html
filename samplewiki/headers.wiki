@@ -1,5 +1,7 @@
 = headers =
 
+Headers support is the same as in Vimwiki.
+
 header with line break (shouldn't render):
 {{{
 =new

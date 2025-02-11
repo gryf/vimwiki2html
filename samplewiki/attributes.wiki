@@ -1,5 +1,8 @@
 = Attributes =
 
+There are several attributes text can be markup. Below is a list with most
+possible combinations.
+
 - bold:
   - `*test bold*`: *test bold*
   - `Nullam **double bold** ante`: Nullam **double bold** ante

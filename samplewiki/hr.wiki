@@ -1,5 +1,8 @@
 = Horizontal rules =
 
+Horizontal rule are created by adding four or mor dashes at the beginning of
+the line. No other characters may appear before or after dashes.
+
 == Correct ==
 
 4 dashes:
@@ -20,10 +23,10 @@ more than 4 dashes:
 
 trailing space:
 {{{
------ 
+-----
 }}}
 
------ 
+-----
 
 leading space:
 

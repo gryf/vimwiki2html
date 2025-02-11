@@ -2,22 +2,26 @@
 
 == Code blocks ==
 
-- plain code :
+- plain code is enclosed between `{{{` and `}}}` markings, which makes
+  whatever in between monospace literal things:
   {{{
 Nisl. Pellentesque porta augue in diam. Duis mattis. Aliquam et mi quis turpis
 pellentesque consequat. Suspendisse nulla erat, lacinia nec, pretium vitae,
-feugiat ac, quam. Etiam sed tellus vel est ultrices condimentum. Vestibulum
-euismod. Vivamus blandit. Pellentesque eu urna. Vestibulum consequat sem vitae
-dui. In dictum feugiat quam. Phasellus placerat. In sem nisl, elementum vitae,
-venenatis nec, lacinia ac, arcu. Pellentesque gravida egestas mi. Integer
-rutrum tincidunt libero.
+feugiat ac, quam. Etiam sed tellus vel est ultrices condimentum.<br/>
+
+<h1>foo</h1>
 
 Duis viverra. Nulla diam lectus, tincidunt et, scelerisque vitae, aliquam
-vitae, justo. Quisque eget erat. Donec aliquet porta magna. Sed nisl. Ut
-tellus. Suspendisse quis mi eget dolor sagittis tristique. Aenean non pede
-eget.
+vitae, justo. Quisque eget erat. Donec aliquet porta magna. Sed nisl.
 }}}
-- Code with syntax highlight (here: python code indicated as `{{{type=py`):
+- There is support for syntax highlighting. Difference between `Vimwiki2HTML`
+  and `vw2html` is the latter is using pygments, while Vimwiki is using vim
+  engine and it's html ability to render code in buffer. Supported markings
+  for indicate code in markings are:
+    - `{{{type=[lang]`
+    - `{{{[lang]`
+  where `[lang]` is language supported by pygments (see `pygmentize -L lexer`
+  for a reference). Here python code indicated as `{{{type=py`:
   {{{type=py
 from flask import Flask
 app = Flask(__name__)
@@ -60,16 +64,21 @@ tempor fringilla, nisl dolor imperdiet dolor, id lobortis ligula nunc sed
 dolor.
 x }}}
 }}}
-- Any character but the whitespace, preceding opening block code will create 
+- Any character but the whitespace, preceding opening block code will create
   simple paragraph not the code block:<br/>
   foo {{{
-Cursus posuere. Morbi bibendum facilisis eros. Phasellus aliquam sapien in 
-erat. Praesent venenatis diam dignissim dui. Praesent risus erat, iaculis ac, 
-dapibus sed, imperdiet ac, erat. Nullam sed ipsum. Phasellus non dolor. Donec 
+Cursus posuere. Morbi bibendum facilisis eros. Phasellus aliquam sapien in
+erat. Praesent venenatis diam dignissim dui. Praesent risus erat, iaculis ac,
+dapibus sed, imperdiet ac, erat. Nullam sed ipsum. Phasellus non dolor. Donec
 ut elit.
 }}}
 
+Note, no additional things like classes are supported for code blocks.
+
 == Inline code ==
+
+There is no syntax highlight for inline code, simply `<code>` tags
+are used to render monospace text.
 
 - Simple command: `ls -la`
 - Several commands `ls -la` in one line `cp foo /tmp`

@@ -2,8 +2,8 @@
 
 == Indented ==
 
-Text which starts with 4 or more spaces is a blockquote. Cannot have
-paragraphs.
+Not supported. Text which starts with 4 or more spaces is a blockquote. Cannot
+have paragraphs.
 
 {{{
     This would be a blockquote in Vimwiki. It is not highlighted in Vim but
@@ -17,8 +17,9 @@ paragraphs.
 
 == Quoted ==
 
-A group of lines prefixed with > also specifies a blockquote, with the caveat
-that the `>` syntax allow empty lines to signal multiple paragraphs.
+Not supported. A group of lines prefixed with > also specifies a blockquote, 
+with the caveat that the `>` syntax allow empty lines to signal multiple 
+paragraphs.
 
 {{{
 > This also signals a block quote.

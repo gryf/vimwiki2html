@@ -14,7 +14,8 @@
 %% this is a comment
   %% even space before '%%' should be treated as comment
 
-athough, if put something before %% it will should not be treated as a comment.
+Although, if put some non-whitespace characters before %% it will should not
+be treated as a comment.
 
 == Multiline comments ==
 
@@ -50,7 +51,8 @@ Pharetra  rhoncus *massa. Vestibulum _ante `ipsum primis sapien.
 styleless with additional footer with date.
 %template custom
 
-`%date` placeholder can be set to whatever. Check out the bottom of the page for Orwell.
+`%date` placeholder can be set to whatever. Check out the bottom of the page
+for Orwell.
 %date 1984-06-08
 
 `%plainhtml` - let's do some real code!
@@ -61,5 +63,5 @@ meh
 %plainhtml <b style="background-color: cornsilk; color: darkred">bar</b>
 %plainhtml </div>
 
-`%nohtml` prevent from content of page containing such placeholder from 
+`%nohtml` prevent from content of page containing such placeholder from
 conversion to html. This page: [[nohtml]] will not be converted.

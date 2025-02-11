@@ -134,7 +134,7 @@ meh
    
 4) baz
 
-== Not supported yet ==
+== Not supported (yet) ==
 
 === Ordered list started with letters or roman numbers. ===
 

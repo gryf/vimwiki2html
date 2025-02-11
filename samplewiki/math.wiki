@@ -1,6 +1,6 @@
 = Mathematical formulae =
 
-This one needs 3rd party software 
+Not supported by `vw2html`. This one needs 3rd party software 
 [[https://en.wikipedia.org/wiki/MathJax|MathJax]]. I have zero interest in
 using it.
 

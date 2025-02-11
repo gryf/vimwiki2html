@@ -1,5 +1,7 @@
 = Paragraphs =
 
+Paragraphs are created by dividing text lines with empty line.
+
 = Single paragraph =
 
 {{{
