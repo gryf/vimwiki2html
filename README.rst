@@ -123,8 +123,8 @@ it's as easy as:
 .. code:: toml
 
    [[vimwiki]]
-   path = /path/to/vimwiki
-   css_name = /path/to/css/file.css
+   path = "/path/to/vimwiki"
+   css_name = "/path/to/css/file.css"
 
 And that's it. Other paths will be assumed or calculated using wiki path, or
 using defaults, so in this case:
@@ -151,16 +151,32 @@ Another thing is, you can have multiple vimwiki configs in single file, i.e.:
 .. code:: toml
 
    [[vimwiki]]
-   path = /path/to/vimwiki
-   css_name = /path/to/css/file.css
+   path = "/path/to/vimwiki"
+   css_name = "/path/to/css/file.css"
 
    [[vimwiki]]
-   path = ~/vimwiki
-   css_name = /path/to/another/css/file.css
+   path = "~/vimwiki"
+   css_name = "/path/to/another/css/file.css"
 
 and whenever you call ``vw2html`` command with single file or whole wiki
 directory, it will search for matching root in available configs and use
 appropriate one.
+
+Integration with vim
+--------------------
+
+You can use ``vw2html`` with vim for rendering wiki, instead of using
+``Vimwiki2HTML`` and/or ``VimwikiAll2HTML``. There are many ways to achieve
+that, one of it is to map the keys:
+
+.. code:: vim
+
+   map <F5> :call system("vw2html " . bufname("%"))<CR>
+   map <F6> :call system("vw2html")<CR>
+
+so, suppose there is a valid configuration and user hit F5 it will pass current
+file to ``vw2html`` and convert it to HTML. F6 on the other hand will execute
+``vw2html`` without arguments, which will do the conversion on entire wiki.
 
 
 Conversion state
