@@ -8,7 +8,8 @@ dynamic = ["version"]
 authors = [
     {name = "Roman Dobosz", email = "gryf73@gmail.com"}
 ]
-license = {text = "GPLv3"}
+license = {text = "MIT"}
+license_files = ["LICENSE"]
 description = "Parse and generate html out of vimwiki source files"
 readme = "README.rst"
 requires-python = ">=3.11"
@@ -18,7 +19,7 @@ classifiers = [
     "Intended Audience :: End Users/Desktop",
     "Topic :: Terminals",
     "Topic :: Utilities",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3 :: Only"
