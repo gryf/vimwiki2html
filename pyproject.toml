@@ -9,7 +9,6 @@ authors = [
     {name = "Roman Dobosz", email = "gryf73@gmail.com"}
 ]
 license = {text = "MIT"}
-license_files = ["LICENSE"]
 description = "Parse and generate html out of vimwiki source files"
 readme = "README.rst"
 requires-python = ">=3.11"
