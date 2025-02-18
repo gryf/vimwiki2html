@@ -787,13 +787,29 @@ class VimWiki2Html:
         if target.endswith('/'):
             return template % (target, description)
 
+        # bare html links without schema. assuming remote links.
+        if target.endswith('.html'):
+            return template % (link, description)
+
+        # anchors for directories
+        if '/#' in target:
+            return template % (target, description)
+
+        # anchors
+        if '#' in target:
+            link, anchor = target.split('#', maxsplit=1)
+            if link.endswith('.html'):
+                return template % (f"{link}#{anchor}", description)
+
+            anchor = target.split('#')[-1]
+            if not link:
+                return template % (f"#{anchor}", description)
+
+            return template % (f"{link}.html#{anchor}", description)
+
         # wiki links for wiki pages
         if not target.endswith('.html'):
             link = f'{target}.html'
-            return template % (link, description)
-
-        # bare html links without schema. assuming remote links.
-        if target.endswith('.html'):
             return template % (link, description)
 
         raise ValueError(string)

@@ -59,7 +59,7 @@ class TestWikiLink(unittest.TestCase):
 
     def test_anchors(self):
         src = '[[index#The Diary]]'
-        exp = '<p>\n<a href="index#The Diary.html">index#The Diary</a>\n</p>'
+        exp = '<p>\n<a href="index.html#The Diary">index#The Diary</a>\n</p>'
 
         self.converter.wiki_contents = src
         self.converter.convert()

@@ -111,6 +111,9 @@ possible options are listed below:
    template_ext = '.tpl'
    # Absolute path to the css stylesheet.
    css_name = ''
+   # If set to false, conversion will execute wiki after wiki. Usefull for
+   # debugging.
+   convert_async = true
 
 As for css file, there is default one which comes with VimWiki and is located
 in `vimwiki/autoload/vimwiki/style.css` although due to different way and
@@ -241,11 +244,14 @@ What's supported
     it's simply working)
 
   - raw links (or bare)
+  - anchor links (implemented differently - only last anchor is taken into
+    account - may cause anchors collision)
 
 - Tables
 
   - tables with headers
   - columns and rows spanning
+  - aligning for the columns (``VimWiki2HTML`` doesn't do that)
 
 - Explicit html tags (supported tag list: ``b``, ``i``, ``s``, ``u``, ``sub``,
   ``sup``, ``kbd``, ``br`` and ``hr``).
@@ -263,7 +269,6 @@ What's not
 - Links:
 
   - interwiki links
-  - anchor links are messed up at the moment, TBD
 
 - Lists:
 
@@ -302,18 +307,14 @@ What's not
     will produce two separate lists, not like in VimWiki html parser single
     list with second item having swallowed empty line.
 
-- Tables
-
-  - no aligning for the columns (``VimWiki2HTML`` doesn't do that either, TBD)
-
 - Mathematical formulae (both - inline and block)
 - Blockquotes
 - Tags
 - Configurable explicit html tags (besides default list)
 
 
-Things on the non supported list is either second priority things (anchors
-definitely need to be fixed) and things, which I have no interested in.
+Most of those are either second priority for implementation or things, which I
+have no interested in.
 
 
 License
