@@ -2,6 +2,7 @@ import argparse
 import logging
 import multiprocessing
 import os
+import re
 import shutil
 import sys
 import tomllib
@@ -12,6 +13,7 @@ LOG = logging.getLogger()
 XDG_CONFIG_HOME = os.getenv('XDG_CONFIG_HOME',
                                 os.path.expanduser('~/.config'))
 CONF_PATH = os.path.join(XDG_CONFIG_HOME, 'vw2html.toml')
+RE_CSS_URL = re.compile(r'url\([\'"]?([^\'"]*)[\'"]?\)')
 
 
 def abspath(path: str) -> str:
@@ -82,6 +84,7 @@ class VimWiki2HTMLConverter:
             msg = "Root of vimwiki not provided, exiting."
             LOG.error(msg)
             raise ValueError(msg)
+
         if not os.path.exists(self.path):
             msg = "Provided vimwiki path doesn't exists, exiting."
             LOG.error(msg)
@@ -181,12 +184,39 @@ class VimWiki2HTMLConverter:
         with open(self._template_fname) as fobj:
             return fobj.read()
 
+    def copy_css_assets(self):
+        with open(self.css_name) as fobj:
+            css = fobj.read().split('\n')
+
+        assets = []
+        for line in css:
+            if urls := RE_CSS_URL.findall(line):
+                assets.extend(urls)
+
+        if not assets:
+            return
+
+        assets = set(assets)  # remove duplicates
+        for asset in assets:
+            dirname = os.path.relpath(os.path.join(self.path,
+                                                   os.path.dirname(asset)),
+                                      start=self.path)
+            src_fname = os.path.join(self.path, dirname,
+                                     os.path.basename(asset))
+            if not os.path.exists(src_fname):
+                continue
+            outdir = os.path.join(self.path_html, dirname)
+            os.makedirs(outdir, exist_ok=True)
+            shutil.copy(src_fname, outdir)
+            # calculate output direcotry
+
     def convert(self):
         # copy css file
         LOG.info("Starting conversion. Using `%s' as an output directory",
                  self.path_html)
         if self.css_name:
             shutil.copy(self.css_name, self.path_html)
+            self.copy_css_assets()
             # TODO: copy assets from CSS too
 
         # run conversion sequentially
