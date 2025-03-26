@@ -260,7 +260,7 @@ class VimWiki2Html:
     max_header_level = 6
     # marks are using Unicode Supplementary Private Use Area A in unicode from
     # the end of the set, there is low chance to fill those with custom
-    # glyphs, and even so, the sentence od **4** (where asterisk is such
+    # glyphs, and even so, the sentence of **4** (where asterisk is such
     # symbol and 4 represents any number) is pretty low to exists in written
     # wiki text.
     codeblock_mark = "󿿽󿿽{}󿿽󿿽"
@@ -322,7 +322,6 @@ class VimWiki2Html:
             _html = _html.replace(self.links_mark.format(index), contents)
         for index, contents in enumerate(self._images):
             _html = _html.replace(self.images_mark.format(index), contents)
-
 
         return _html
 
