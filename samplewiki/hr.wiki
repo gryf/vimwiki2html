@@ -1,6 +1,6 @@
 = Horizontal rules =
 
-Horizontal rule are created by adding four or mor dashes at the beginning of
+Horizontal rules are created by adding four or more dashes at the beginning of
 the line. No other characters may appear before or after dashes.
 
 == Correct ==
@@ -23,10 +23,10 @@ more than 4 dashes:
 
 trailing space:
 {{{
------
+----- (there is a space after last dash)
 }}}
 
------
+----- 
 
 leading space:
 

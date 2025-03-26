@@ -38,7 +38,7 @@ def hello():
 if __name__ == "__main__":
     app.run()
 }}}
-- code with several withespace around text (manually centered)
+- code with several whitespace around text (manually centered)
   {{{
             Ac elit. Nullam tincidunt ligula vitae nulla.
          Vivamus sit amet risus et ipsum viverra malesuada.

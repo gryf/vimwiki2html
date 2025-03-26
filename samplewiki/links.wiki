@@ -42,6 +42,8 @@
     [[local:C:/Users/somebody/d/e/f/music.mp3]]
   - `[[file:/home/user/documents/|Link to a directory]]`
     [[file:/home/user/documents/|Link to a directory]]
+  - link description with square brackets `[[https://ddg.gg|[d]uckduckgo]]`
+    [[https://ddg.gg|[d]uckduckgo]]
 - Transclusions
   - `{{file:../../images/vimwiki_logo.png|inclusion of nonexisting image}}`
     {{file:../../images/vimwiki_logo.png|inclusion of nonexisting image}}

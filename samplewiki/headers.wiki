@@ -53,3 +53,9 @@ header with attributes (italic, bold and crossed out) (should render):
 }}}
 
 == header with _italic_ *bold* ~~and crossed~~ ==
+
+{{{
+ ===    header3  ===     # trailing spaces
+}}}
+
+ ===    header3  ===     

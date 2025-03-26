@@ -30,7 +30,7 @@ possible combinations.
 - `*bold _italic ~~strikeout~~ no crosed* not bold_ nor italic.`:
   *bold _italic ~~strikeout~~ no crosed* not bold_ nor italic.
 - `square^2^`: square^2^
-- this will maka addidional `^` visible in `square^^2^^`: square^^2^^
+- this will make addidional `^` visible in `square^^2^^`: square^^2^^
 - `meh,,2,,`: meh,,2,,
 - Additional commas will not appear, although spaces will in `meh ,, 2 ,,`:
   meh ,, 2 ,,
