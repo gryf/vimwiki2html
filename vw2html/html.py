@@ -166,6 +166,52 @@ class Table:
         self.rows = table
 
 
+class DefinitionList:
+    def __init__(self):
+        self.centered = False
+        self._definitions = []
+        self._html = ''
+        self.indent = None
+        self.in_para = False
+
+    def render(self):
+        if self.in_para:
+            self.in_para = False
+            self._definitions[-1] += '</p>\n'
+        output = '<dl class="center">' if self.centered else "<dl>"
+        if self._html:
+            output += self._html
+        for def_ in self._definitions:
+            output += f'<dd>{def_}</dd>\n'
+        output += '</dl>\n'
+        return output
+
+    def flush(self):
+        if self.in_para:
+            self._definitions[-1] += '</p>\n'
+            self.in_para = False
+
+    def add_definition(self, title, def_):
+        if title:
+            if self._definitions:
+                for _def in self._definitions:
+                    if not _def.startswith('<p>'):
+                        _def = f"<p>{_def}</p>\n"
+                    self._html += f'<dd>{_def}</dd>\n'
+                self._definitions = []
+            self._html += f'<dt>{title}</dt>\n'
+        if def_:
+            self.in_para = True
+            self._definitions.append("<p>" + def_)
+
+    def add_to_def(self, content):
+        if not self._definitions:
+            LOG.error('There is no definitions in current deflist')
+            return
+
+        self._definitions[-1] += " " + content
+
+
 re_ph_nohtml = re.compile(r'^\s*%nohtml\s*$', flags=re.MULTILINE)
 re_ph_title = re.compile(r'^\s*%title\s(.*)$', flags=re.MULTILINE)
 re_ph_template = re.compile(r'^\s*%template\s(.*)$', flags=re.MULTILINE)
@@ -204,6 +250,7 @@ re_html_links = re.compile(r'\[\[(?P<contents>'
                            r'(?:http:|https:|ftp:|mailto:|www\.)?'
                            r'[^]]*)\]\]')
 re_table_header_sep = re.compile(r'\s?:?-+:?\s?')
+re_listdef = re.compile(r'^\s*(?P<title>.*)?::(?P<definition>\s.+)?\s*$')
 
 
 class VimWiki2Html:
@@ -244,6 +291,7 @@ class VimWiki2Html:
         self._state = State()
         self._line_processed = False
         self._lists = []
+        self._deflist = None
 
     def get_output_path(self):
         # get relative link out of self.root
@@ -324,6 +372,9 @@ class VimWiki2Html:
                 list_lines = self._close_lists()
                 if list_lines:
                     ldest.extend(list_lines)
+                if self._deflist:
+                    ldest.append(self._deflist.render())
+                    self._deflist = None
                 ldest.append(self._parse_header(header))
                 self._previus_line = line
                 continue
@@ -336,6 +387,9 @@ class VimWiki2Html:
                 list_lines = self._close_lists()
                 if list_lines:
                     ldest.extend(list_lines)
+                if self._deflist:
+                    ldest.append(self._deflist.render())
+                    self._deflist = None
                 ldest.append('<hr />')
                 self._previus_line = line
                 continue
@@ -352,6 +406,8 @@ class VimWiki2Html:
         # process end of file
         # close opened tags if any
         lines = []
+        if self._deflist:
+            lines.append(self._deflist.render())
         close_para(self._state.para, lines)
         lines.extend(self._close_lists())
         ldest.extend(lines)
@@ -415,6 +471,13 @@ class VimWiki2Html:
         lines = self._handle_tables(line)
         if lines:
             res_lines.extend(lines)
+        if self._line_processed:
+            return res_lines
+
+        # list definitions
+        lines = self._handle_list_definitions(line)
+        if lines:
+            res_lines.append(lines)
         if self._line_processed:
             return res_lines
 
@@ -813,6 +876,62 @@ class VimWiki2Html:
             return template % (link, description)
 
         raise ValueError(string)
+
+    def _handle_list_definitions(self, line):
+        """
+        Handle definition lists
+        """
+        if not line.strip() and self._deflist:
+            # might be continuation on new line
+            self._line_processed = True
+            return
+
+        match = re_listdef.match(line)
+
+        if not match:
+            if self._deflist:
+                indent = len(line.split(line.strip())[0])
+                line_to_add = ''
+                if indent == self._deflist.indent or self._lists:
+                    html = self._handle_list(line.rstrip())
+                    html = "\n".join(html) if html else ''
+                    if self._lists:
+                        if self._deflist.in_para:
+                            self._deflist.flush()
+                        line_to_add += html
+                    else:
+                        line_to_add += html
+                        if not self._previus_line.strip():
+                            if self._deflist.in_para:
+                                self._deflist.flush()
+                            self._deflist.in_para = True
+                            line_to_add += '<p>'
+                        line_to_add += self._apply_attrs(line.strip())
+                    self._deflist.add_to_def(line_to_add)
+                    self._line_processed = True
+                    return
+                html = self._deflist.render()
+                self._deflist = None
+                return html
+            return
+
+        self._line_processed = True
+        title, definition = match.groups()
+        indent = None
+        if title:
+            title = self._apply_attrs(title.strip())
+        if definition:
+            indent = len(line.split(definition.strip())[0])
+            definition = self._apply_attrs(definition.strip())
+
+        if not self._deflist:
+            self._deflist = DefinitionList()
+        self._deflist.add_definition(title, definition)
+
+        if indent is not None:
+            self._deflist.indent = indent
+
+        return
 
     def _handle_list(self, line):
         """

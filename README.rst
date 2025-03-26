@@ -204,6 +204,10 @@ What's supported
   - Support for unordered lists (``*``, ``-``, ``#``)
   - Support for ordered lists (``1.``, ``2)``)
   - Support for TODO lists (default markings for the items)
+  - Support for definition lists
+
+    - including multiline paragraph in definition
+    - including limited lists support nested within definition
 
 - Preformatted text
 

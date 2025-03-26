@@ -134,7 +134,159 @@ meh
    
 4) baz
 
-== Not supported (yet) ==
+== Definitions ==
+
+=== Sample definition from VimWiki help ===
+
+{{{
+Term 1:: Definition 1
+Term 2::
+:: Definition 2
+:: Definition 3
+}}}
+
+Term 1:: Definition 1
+Term 2::
+:: Definition 2
+:: Definition 3
+
+=== Orphaned definition without title ===
+
+{{{
+:: there is no title
+}}}
+
+:: there is no title
+
+=== Orphaned title without definition ===
+
+{{{
+there is no definition::
+}}}
+
+there is no definition::
+
+=== Several colons in the line ===
+
+{{{
+foo:: bar:baz :: foobar
+}}}
+
+foo:: bar:baz :: foobar
+
+=== Valid examples of colon usage and overindentation ===
+
+Here, definition is swallowed by citation in VimWiki. In vw2html it should be
+fine.
+
+{{{
+   overindented title            :: typical definition
+    four space title::    definition with trailing spaces   # there are spaces
+title:with:colons::
+:: D:efinition with colon
+ :: indented definition
+}}}
+
+   overindented title            :: typical definition
+    four space title::    definition with trailing spaces   
+title:with:colons::
+:: D:efinition with colon
+ :: indented definition
+
+=== Multile titles for single definition ===
+
+{{{
+multiple ::
+terms::
+ and::
+:: single definition
+}}}
+
+multiple ::
+terms::
+ and::
+:: single definition
+
+=== Multiple definition for single title ===
+
+{{{
+def1:: multiple definitions
+:: another definition
+:: and another
+}}}
+
+def1:: multiple definitions
+:: another definition
+:: and another
+
+=== Multiline examples ===
+
+It's not supported on Vimwiki2HTML, but, well it is useful.
+
+{{{
+multiline::
+:: Definition first sentence,
+   sentence continuation
+
+   Multiline second paragraph
+   
+   Multiline 3rd paragraph
+}}}
+
+multiline::
+:: Definition first sentence,
+   sentence continuation
+
+   Multiline second paragraph
+   
+   Multiline 3rd paragraph
+
+=== Multiline underinddented ===
+
+This will be treated as immediate end of definition list and treated as a 
+paragraph
+
+{{{
+wrong1::
+:: definition first par
+  underindented continuation - should end definition
+  
+wrong2::
+:: definition first par
+    overindented continuation - should end definition
+}}}
+
+wrong1::
+:: definition first par
+  underindented continuation - should end definition
+  
+wrong2::
+:: definition first par
+    overindented continuation - should end definition
+
+{{{
+wrong3::
+:: definition first par
+
+  underindented paragraph - should end definition
+
+wrong4::
+:: definition first par
+
+    overindented paragraph - should end definition
+}}}
+
+wrong3::
+:: definition first par
+
+  underindented paragraph - should end definition
+
+wrong4::
+:: definition first par
+
+    overindented paragraph - should end definition
+
+== Not supported ==
 
 === Ordered list started with letters or roman numbers. ===
 
@@ -159,17 +311,3 @@ class to indicate they are letter-based or roman based numbers.
   I) Numbered list item 1
   II) Numbered list item 2
   III) Numbered list item 3
-
-=== Definitions ===
-
-{{{
-Term 1:: Definition 1
-Term 2::
-:: Definition 2
-:: Definition 3
-}}}
-
-Term 1:: Definition 1
-Term 2::
-:: Definition 2
-:: Definition 3
