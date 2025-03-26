@@ -90,4 +90,12 @@ class TestWikiLink(unittest.TestCase):
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
 
-# TODO: dodać testy dla transclusions, relatywnych linków zewnętrzny, diary
+    def test_external_link_with_bracets_in_desc(self):
+        src = '[[https://meh.us|[d]esc]]'
+        exp = '<p>\n<a href="https://meh.us">[d]esc</a>\n</p>'
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+# TODO: add tests for transclusions, relative external links and diary
