@@ -71,6 +71,7 @@ class VimWiki2HTMLConverter:
         self.update(args)
 
     def update(self, args):
+        LOG.debug("Updating arguments")
         # root path
         self.path = args.root if args.root else self.path
         self.path_html = args.output if args.output else self.path_html
@@ -100,8 +101,8 @@ class VimWiki2HTMLConverter:
                        f"proceed.")
                 LOG.error(msg)
                 raise ValueError(msg)
-            LOG.warning("Path `%s' exists. Contents will be overwriten.",
-                        self.path_html)
+            LOG.info("Path `%s' exists. Contents will be overwriten.",
+                     self.path_html)
         else:
             os.makedirs(self.path_html)
 
@@ -145,6 +146,19 @@ class VimWiki2HTMLConverter:
             self._sources.append(args.source)
         else:
             self.scan_for_wiki_files()
+        LOG.debug("Using configuration:\n"
+                  "  path: %s\n"
+                  "  path_html: %s\n"
+                  "  index: %s\n"
+                  "  ext: %s\n"
+                  "  template_path: %s\n"
+                  "  template_default: %s\n"
+                  "  template_ext: %s\n"
+                  "  css_name: %s\n"
+                  "  convert_async: %s\n", self.path, self.path_html,
+                  self.index, self.ext, self.template_path,
+                  self.template_default, self.template_ext, self.css_name,
+                  self.convert_async)
 
     def _apply_data_to_template(self, html_obj):
         # calculate %root_path% for nested in subdirectories content
@@ -366,10 +380,36 @@ def _validate_output(path):
             raise argparse.ArgumentTypeError(msg)
     return path
 
+def get_verbose(verbose_level, quiet_level):
+    """
+    Change verbosity level. Default level is warning.
+    """
+
+    level = logging.WARNING
+
+    if quiet_level:
+        level = logging.ERROR
+        if quiet_level > 1:
+            # Only critical messages are displayed
+            level = logging.CRITICAL
+
+    if verbose_level:
+        level = logging.INFO
+        if verbose_level > 1:
+            level = logging.DEBUG
+
+    return level
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-v', '--version', action='version',
+    parser.add_argument('-v', '--verbose',  action='count', default=0,
+                        help='be verbose. Adding more "v" will increase '
+                        'verbosity')
+    parser.add_argument('-q', '--quiet',  action='count', default=0,
+                        help='suppress output. Adding more "q" will decrease '
+                        'messages visibility')
+    parser.add_argument('-V', '--version', action='version',
                         version=vw2html.__version__)
     parser.add_argument('source', nargs="?", type=_validate_file_or_dir,
                         help='Wiki file or directory to be recursively scanned'
@@ -393,10 +433,12 @@ def parse_args():
                         "will skip loading confoguration")
     parser.add_argument('-f', '--force', action='store_true', help="Convert "
                         "all files even if source seems unchanged")
-    logging.basicConfig(level=logging.DEBUG,
+
+    args = parser.parse_args()
+    logging.basicConfig(level=get_verbose(args.verbose, args.quiet),
                         format='%(levelname)s: %(message)s')
 
-    return parser.parse_args()
+    return args
 
 
 def main():
