@@ -98,4 +98,21 @@ class TestWikiLink(unittest.TestCase):
         self.converter.convert()
         self.assertEqual(self.converter.html, exp)
 
+    def test_external_link_with_single_arbitrary_attrs(self):
+        src = '[[https://meh.us|desc|class="foo"]]'
+        exp = '<p>\n<a href="https://meh.us" class="foo">desc</a>\n</p>'
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_external_link_with_arbitrary_attrs(self):
+        src = '[[https://meh.us|desc|class="foo" data="bar"]]'
+        exp = ('<p>\n<a href="https://meh.us" class="foo" data="bar">'
+               'desc</a>\n</p>')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
 # TODO: add tests for transclusions, relative external links and diary

@@ -799,21 +799,26 @@ class VimWiki2Html:
 
     def _get_link_out_of_string(self, string):
         description = None
+        attrs = ''
         if '|' in string:
             target, description = string.split('|', maxsplit=1)
+            if '|' in description:
+                description, attrs = description.split('|', maxsplit=1)
+                if attrs:
+                    attrs = ' ' + attrs
         else:
             target = string
-        template = '<a href="%s">%s</a>'
+        template = '<a href="%s"%s>%s</a>'
         if not description:
             description = target
 
         if target.startswith('diary:'):
-            return template % (f'diary/{target[6:]}.html', description)
+            return template % (f'diary/{target[6:]}.html', attrs, description)
 
         for schema in ('http:', 'https:', 'ftp:', 'mailto:'):
             if target.startswith(schema):
                 # plain url, just return it
-                return template % (target, description)
+                return template % (target, attrs, description)
 
         link = None
         for schema in ('file:', 'local:'):
@@ -830,49 +835,49 @@ class VimWiki2Html:
                 elif self.root in link:
                     link = os.path.relpath(os.path.join(self.root, link),
                                            start=self.root)
-            return template % (link, description)
+            return template % (link, attrs, description)
 
         # absolute links
         if target.startswith('//'):
             link = os.path.expanduser(os.path.expandvars(target[2:]))
             if link.endswith('/'):
-                return template % (link, description)
-            return template % (link + '.html', description)
+                return template % (link, attrs, description)
+            return template % (link + '.html', attrs, description)
 
         # relative links for wiki
         if target.startswith('/'):
             if target.endswith('/'):
-                return template % (f'{target[1:]}', description)
-            return template % (f'{target[1:]}.html', description)
+                return template % (f'{target[1:]}', attrs, description)
+            return template % (f'{target[1:]}.html', attrs, description)
 
         # wiki links for directories
         if target.endswith('/'):
-            return template % (target, description)
+            return template % (target, attrs, description)
 
         # bare html links without schema. assuming remote links.
         if target.endswith('.html'):
-            return template % (link, description)
+            return template % (link, attrs, description)
 
         # anchors for directories
         if '/#' in target:
-            return template % (target, description)
+            return template % (target, attrs, description)
 
         # anchors
         if '#' in target:
             link, anchor = target.split('#', maxsplit=1)
             if link.endswith('.html'):
-                return template % (f"{link}#{anchor}", description)
+                return template % (f"{link}#{anchor}", attrs, description)
 
             anchor = target.split('#')[-1]
             if not link:
-                return template % (f"#{anchor}", description)
+                return template % (f"#{anchor}", attrs, description)
 
-            return template % (f"{link}.html#{anchor}", description)
+            return template % (f"{link}.html#{anchor}", attrs, description)
 
         # wiki links for wiki pages
         if not target.endswith('.html'):
             link = f'{target}.html'
-            return template % (link, description)
+            return template % (link, attrs, description)
 
         raise ValueError(string)
 

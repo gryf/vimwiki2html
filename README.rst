@@ -251,6 +251,11 @@ What's supported
   - anchor links (implemented differently - only last anchor is taken into
     account - may cause anchors collision)
 
+  - adding arbitrary attributes for the link - i.e.
+    ``[[target|descritption|class="foo"]]``. This is addition which doesn't
+    exists on VimWiki, but it's nice addition for adding lightbox-ish
+    functionality
+
 - Tables
 
   - tables with headers
