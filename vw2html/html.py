@@ -242,10 +242,10 @@ re_list = re.compile(r'^(\s*)([\*\-#]|[\d]+[\.\)])\s(?:\[([^]])\]\s?)?'
 re_indented_text = re.compile(r'^(\s+)(.*)$')
 # TODO(gryf): make tag list configurable
 re_safe_html = re.compile(r'<(\s*/*(?!(?:b|i|u|sub|sup|kbd|br|hr))\w.*?)>')
-re_bare_links = re.compile(r'(?<!\w)((?:http:|https:|ftp:|mailto:|www\.)/*[^\s]+)')
-re_wiki_links = re.compile(r'\[\[(?P<contents>[^]]+)\]\]')
+re_bare_links = re.compile(r'(?<!\w)'
+                           r'((?:http:|https:|ftp:|mailto:|www\.)/*[^\s]+)')
+re_wiki_links = re.compile(r'\[\[(?P<contents>.+?)\]\]')
 re_transclusion_links = re.compile(r'(?<!{){{(?P<contents>[^}]+)}}(?!})')
-re_bare_links = re.compile(r'(?<!\w)((?:http:|https:|ftp:|mailto:|www\.)/*[^\s]+)')
 re_html_links = re.compile(r'\[\[(?P<contents>'
                            r'(?:http:|https:|ftp:|mailto:|www\.)?'
                            r'[^]]*)\]\]')
