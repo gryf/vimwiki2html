@@ -13,7 +13,7 @@ LOG = logging.getLogger()
 XDG_CONFIG_HOME = os.getenv('XDG_CONFIG_HOME',
                                 os.path.expanduser('~/.config'))
 CONF_PATH = os.path.join(XDG_CONFIG_HOME, 'vw2html.toml')
-RE_CSS_URL = re.compile(r'url\([\'"]?([^\'"]*)[\'"]?\)')
+RE_CSS_URL = re.compile(r'url\([\'"]?([^\'")]*?)[\'"]?\)')
 
 
 def abspath(path: str) -> str:
@@ -235,11 +235,13 @@ class VimWiki2HTMLConverter:
 
         # run conversion sequentially
         if not self.convert_async:
+            LOG.info("Running conversion sequentially")
             for filepath in self._sources:
                 self._convert(filepath)
             return 0
 
         # or use async pool
+        LOG.info("Running conversion concurrently")
         try:
             with multiprocessing.Pool() as p:
                 try:
@@ -267,6 +269,7 @@ class VimWiki2HTMLConverter:
             return 1
 
     def _convert(self, filepath):
+        LOG.debug("Processing file %s", filepath)
         wiki_obj = vw2html.html.VimWiki2Html(filepath, self.path,
                                              self.path_html, self.assets)
         source_mtime = 1
@@ -277,7 +280,6 @@ class VimWiki2HTMLConverter:
         except OSError:
             pass
 
-        #time.sleep(0.5)
         if (source_mtime > dest_mtime) or self.force:
             # convert only when:
             # - conversion is forced
