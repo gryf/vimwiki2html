@@ -127,7 +127,6 @@ it's as easy as:
 
    [[vimwiki]]
    path = "/path/to/vimwiki"
-   css_name = "/path/to/css/file.css"
 
 And that's it. Other paths will be assumed or calculated using wiki path, or
 using defaults, so in this case:
@@ -137,14 +136,16 @@ using defaults, so in this case:
 - ``template_path`` will be ``/path/to/vimwiki``
 - ``template_default`` will be ``default``
 - ``template_ext`` will be ``.tpl``
-- ``css_name`` will be ``/path/to/css/file.css``.
+- ``css_name`` will be none
 
 in other words:
 
 - root wiki: ``path/to/vimwiki``
 - html output: ``path/to/vimwiki_html``
 - default template file: ``path/to/vimwiki/default.tpl``
-- and css file: ``/path/to/css/file.css``
+
+optionally you can provide CSS file using ``css_name`` with full path to css
+file.
 
 Wiki path is needed even for single wiki file, as it is used for gathering all
 needed pieces like templates, stylesheet and assets.
@@ -155,15 +156,33 @@ Another thing is, you can have multiple vimwiki configs in single file, i.e.:
 
    [[vimwiki]]
    path = "/path/to/vimwiki"
-   css_name = "/path/to/css/file.css"
 
    [[vimwiki]]
    path = "~/vimwiki"
-   css_name = "/path/to/another/css/file.css"
 
 and whenever you call ``vw2html`` command with single file or whole wiki
 directory, it will search for matching root in available configs and use
 appropriate one.
+
+Templates
+---------
+
+Even so templates can be in whatever HTML standard (including raw *tag soup*,
+HTML4, XHTML and HTML5), parser used for extracting css and javascript files
+origins from Python stdlib, just for simplicity (it might change in the future
+with optional dependency on BeautifulSoup - for now it's ``minidom`` parser),
+so be careful and close all the tags even if standards like HTML5 permit for
+unclosing tags like ``<link>``.
+
+If you place css file(s) into template, you don't have to provide ``css_name``
+in the configuration or use ``--stylesheet`` commandline option - all the files
+will be gathered from the links and put into destination directory with exact
+directory structure like in source vimwiki path. Additionally, assets from CSS
+files will be copied as well (namely image files), while JavaScript files will
+not be searched for those.
+
+When using no template (i.e. using "default") using external CSS file is
+optional as well, although resulting HTML will be pretty raw.
 
 Integration with vim
 --------------------

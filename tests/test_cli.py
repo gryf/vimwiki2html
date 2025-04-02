@@ -89,7 +89,7 @@ class TestCliMain(unittest.TestCase):
         self.assertEqual(vw2hc.path, os.path.dirname(self._source))
         self.assertEqual(vw2hc._template, '<html><head><title>VimWiki</title>'
                          '<link rel="Stylesheet" type="text/css" '
-                         'href="%root_path%%css%"></head>'
+                         'href="%root_path%%css%" /></head>'
                          '<body>%content%</body></html>')
         self.assertIsNone(vw2hc.css_name)
 

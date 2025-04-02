@@ -6,6 +6,8 @@ import re
 import shutil
 import sys
 import tomllib
+import xml.dom.minidom
+import xml.parsers.expat
 
 import vw2html
 
@@ -19,6 +21,34 @@ RE_CSS_URL = re.compile(r'url\([\'"]?([^\'")]*?)[\'"]?\)')
 def abspath(path: str) -> str:
     return os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
 
+
+def get_script_link_paths(elem):
+    ret_elems = []
+    for child in elem.childNodes:
+        if not isinstance(child, xml.dom.minidom.Element):
+            continue
+
+        if child.nodeName.lower() == 'link':
+            key_map = {k.lower(): k for k in child.attributes.keys()}
+            rel = child.attributes.getNamedItem(key_map.get('rel'))
+            if not (rel and rel.value.lower() == 'stylesheet'):
+                continue
+            href = child.attributes.getNamedItem(key_map.get('href'))
+            if not (href and href.value):
+                continue
+            ret_elems.append(('css', href.value))
+            continue
+
+        if child.nodeName.lower() == 'script':
+            key_map = {k.lower(): k for k in child.attributes.keys()}
+            src = child.attributes.getNamedItem(key_map.get('src'))
+            if not src:
+                continue
+            ret_elems.append(('js', src.value))
+            continue
+
+        ret_elems.extend(get_script_link_paths(child))
+    return ret_elems
 
 class VimWiki2HTMLConverter:
     # Root path for the wiki, potentially used in templates and it
@@ -63,7 +93,7 @@ class VimWiki2HTMLConverter:
         # %content% - where generated content goes
         self._template = ('<html><head><title>VimWiki</title>'
                           '<link rel="Stylesheet" type="text/css" '
-                          'href="%root_path%%css%"></head>'
+                          'href="%root_path%%css%" /></head>'
                           '<body>%content%</body></html>')
         self._template_fname = None
         self._sources = []
@@ -146,6 +176,9 @@ class VimWiki2HTMLConverter:
             self._sources.append(args.source)
         else:
             self.scan_for_wiki_files()
+
+        self.copy_template_assets(self._template)
+
         LOG.debug("Using configuration:\n"
                   "  path: %s\n"
                   "  path_html: %s\n"
@@ -181,36 +214,102 @@ class VimWiki2HTMLConverter:
         return html.replace('%date%', html_obj.date)
 
     def get_template_contents(self, template=None):
+        template_content = ""
+        if not any([template, self._template_fname and
+                    os.path.exists(self._template_fname)]):
+            return self._template
+
         if template:
             path = os.path.join(self.template_path, template
                                 + self.template_ext)
-            if not os.path.exists(path):
+            try:
+                with open(path) as fobj:
+                    template_content = fobj.read()
+                self.copy_template_assets(template_content)
+            except OSError:
                 LOG.error('Error loading template "%s", ignoring.',
                           template)
-                return ""
-            with open(path) as fobj:
-                return fobj.read()
+        else:
+            try:
+                with open(self._template_fname) as fobj:
+                    template_content = fobj.read()
+            except OSError:
+                LOG.error('Error loading template "%s", ignoring.',
+                          self._template_fname)
 
-        if not any([self._template_fname and os.path.exists(self.
-                                                            _template_fname)]):
-            return self._template
+        return template_content
 
-        with open(self._template_fname) as fobj:
-            return fobj.read()
+    def copy_template_assets(self, template_content):
+        """
+        Analyse template file contents in context of stylesheets and
+        javascript files and copy them with all their assets to destination
+        directory.
+        """
+        try:
+            doc = xml.dom.minidom.parseString(template_content)
+        except xml.parsers.expat.ExpatError as err:
+            LOG.error("All CSS assets will be ignored as there is an issue "
+                      "with HTML template: %s", err)
+            return
+        dom = None
 
-    def copy_css_assets(self):
-        with open(self.css_name) as fobj:
-            css = fobj.read().split('\n')
+        for child in doc.childNodes:
+            if (isinstance(child, xml.dom.minidom.Element)
+                and child.nodeName.lower() == 'html'):
+                dom = child
+                break
 
-        assets = []
-        for line in css:
-            if urls := RE_CSS_URL.findall(line):
-                assets.extend(urls)
-
-        if not assets:
+        if not dom:
+            LOG.debug("Seems like there is no valid template")
             return
 
+        assets = []
+        paths = get_script_link_paths(dom)
+
+        LOG.info("Gathering data out of css/js files")
+
+        assets = []
+        for type_, path in paths:
+            LOG.debug("Processing file %s of type %s", path, type_)
+            # assume %root_path% is vimwiki root path in this case
+            fpath = os.path.join(self.path, path)
+            if path.startswith('%root_path%'):
+                fpath = os.path.join(self.path, path.split('%root_path%')[1])
+
+            dirname = os.path.relpath(os.path.join(self.path,
+                                                   os.path.dirname(fpath)),
+                                      start=self.path)
+            dirname = '' if dirname == '.' else dirname
+
+            src_fname = abspath(os.path.join(self.path, dirname,
+                                             os.path.basename(fpath)))
+            src_dirname = os.path.dirname(src_fname)
+
+            if not os.path.exists(src_fname):
+                LOG.warning("File `%s' doesn't exists, ignoring", src_fname)
+                continue
+
+            outdir = os.path.join(self.path_html, dirname)
+            os.makedirs(outdir, exist_ok=True)
+            shutil.copy(src_fname, outdir)
+
+            with open(src_fname) as fobj:
+                contents = fobj.read()
+                # NOTE: Ignore assets which are hardcoded in Javascript
+                #       files - it might be difficult for getting the right
+                #       source out of it
+                if type_ != "css":
+                    LOG.debug("Ignoring %s file %s", type_, path)
+                    continue
+
+                for match in RE_CSS_URL.findall(contents):
+                    if match.startswith('data:'):
+                        continue
+                    LOG.debug("CSS: Found %s in file %s", match, path)
+                    assets.append(abspath(os.path.join(src_dirname, match)))
+
         assets = set(assets)  # remove duplicates
+
         for asset in assets:
             dirname = os.path.relpath(os.path.join(self.path,
                                                    os.path.dirname(asset)),
@@ -218,20 +317,22 @@ class VimWiki2HTMLConverter:
             src_fname = os.path.join(self.path, dirname,
                                      os.path.basename(asset))
             if not os.path.exists(src_fname):
+                LOG.debug("Asset file %s doesn't exists", src_fname)
                 continue
             outdir = os.path.join(self.path_html, dirname)
             os.makedirs(outdir, exist_ok=True)
+            LOG.debug("Copying asset %s to %s", src_fname, outdir)
             shutil.copy(src_fname, outdir)
-            # calculate output direcotry
 
     def convert(self):
         # copy css file
         LOG.info("Starting conversion. Using `%s' as an output directory",
                  self.path_html)
         if self.css_name:
+            # NOTE: assets from css file will be copied during either after
+            # resolving default template and on custom one from %template
+            # placeholder
             shutil.copy(self.css_name, self.path_html)
-            self.copy_css_assets()
-            # TODO: copy assets from CSS too
 
         # run conversion sequentially
         if not self.convert_async:
