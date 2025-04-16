@@ -166,50 +166,58 @@ class Table:
         self.rows = table
 
 
+class Definition:
+    def __init__(self, new_line=None):
+        self._lines = [new_line] if new_line else []
+
+    def append(self, item):
+        self._lines.append(item)
+
+    def add_to_line(self, item):
+        if not self._lines:
+            LOG.error('There is no lines in definition when expected')
+            return
+        self._lines[-1] += ' ' + item
+
+    def render(self):
+        return ''.join([f'<p>{p}</p>\n' for p in self._lines])
+
 class DefinitionList:
     def __init__(self):
         self.centered = False
         self._definitions = []
         self._html = ''
         self.indent = None
-        self.in_para = False
 
     def render(self):
-        if self.in_para:
-            self.in_para = False
-            self._definitions[-1] += '</p>\n'
-        output = '<dl class="center">' if self.centered else "<dl>"
+        for _def in self._definitions:
+            self._html += f"<dd>\n{_def.render()}</dd>\n"
+        output = '<dl class="center">\n' if self.centered else "<dl>\n"
         if self._html:
             output += self._html
-        for def_ in self._definitions:
-            output += f'<dd>{def_}</dd>\n'
         output += '</dl>\n'
         return output
-
-    def flush(self):
-        if self.in_para:
-            self._definitions[-1] += '</p>\n'
-            self.in_para = False
 
     def add_definition(self, title, def_):
         if title:
             if self._definitions:
                 for _def in self._definitions:
-                    if not _def.startswith('<p>'):
-                        _def = f"<p>{_def}</p>\n"
-                    self._html += f'<dd>{_def}</dd>\n'
+                    self._html += f"<dd>\n{_def.render()}</dd>\n"
                 self._definitions = []
             self._html += f'<dt>{title}</dt>\n'
-        if def_:
-            self.in_para = True
-            self._definitions.append("<p>" + def_)
 
-    def add_to_def(self, content):
+        if def_:
+            self._definitions.append(Definition(def_))
+
+    def add_to_def(self, content, new_para):
         if not self._definitions:
             LOG.error('There is no definitions in current deflist')
             return
 
-        self._definitions[-1] += " " + content
+        if new_para:
+            self._definitions[-1].append(content)
+        else:
+            self._definitions[-1].add_to_line(content)
 
 
 re_ph_nohtml = re.compile(r'^\s*%nohtml\s*$', flags=re.MULTILINE)
@@ -895,25 +903,38 @@ class VimWiki2Html:
         if not match:
             if self._deflist:
                 indent = len(line.split(line.strip())[0])
-                line_to_add = ''
-                if indent == self._deflist.indent or self._lists:
-                    html = self._handle_list(line.rstrip())
-                    html = "\n".join(html) if html else ''
-                    if self._lists:
-                        if self._deflist.in_para:
-                            self._deflist.flush()
-                        line_to_add += html
-                    else:
-                        line_to_add += html
-                        if not self._previus_line.strip():
-                            if self._deflist.in_para:
-                                self._deflist.flush()
-                            self._deflist.in_para = True
-                            line_to_add += '<p>'
-                        line_to_add += self._apply_attrs(line.strip())
-                    self._deflist.add_to_def(line_to_add)
+                new_para = not self._previus_line.strip()
+                list_frag = ''
+
+                if self._lists:
+                    list_frag = self._handle_list(line)
+                    if list_frag:
+                        self._deflist.add_to_def(''.join(list_frag), False)
+                        if self._lists:  # list not closed yet
+                            self._line_processed = True
+                            return
+
+                if indent == self._deflist.indent and list_frag and not self._lists:
+                    self._deflist.add_to_def(self._apply_attrs(line.strip()),
+                                             new_para)
+
                     self._line_processed = True
                     return
+
+                if indent == self._deflist.indent:
+                    html =  self._handle_list(line)
+                    if html:
+                        self._deflist.add_to_def(''.join(html), new_para)
+                    else:
+                        self._deflist.add_to_def(self._apply_attrs(line.strip()),
+                                                 new_para)
+                    self._line_processed = True
+                    return
+
+                if self._lists:
+                    self._deflist.add_to_def(''.join(self._close_lists()),
+                                             False)
+
                 html = self._deflist.render()
                 self._deflist = None
                 return html
@@ -927,6 +948,9 @@ class VimWiki2Html:
         if definition:
             indent = len(line.split(definition.strip())[0])
             definition = self._apply_attrs(definition.strip())
+
+        if self._deflist and self._lists:
+            self._deflist.add_to_def(''.join(self._close_lists()), False)
 
         if not self._deflist:
             self._deflist = DefinitionList()
