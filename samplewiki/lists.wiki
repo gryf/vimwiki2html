@@ -188,7 +188,7 @@ title:with:colons::
 }}}
 
    overindented title            :: typical definition
-    four space title::    definition with trailing spaces   
+    four space title::    definition with trailing spaces
 title:with:colons::
 :: D:efinition with colon
  :: indented definition
@@ -229,7 +229,7 @@ multiline::
    sentence continuation
 
    Multiline second paragraph
-   
+
    Multiline 3rd paragraph
 }}}
 
@@ -238,19 +238,19 @@ multiline::
    sentence continuation
 
    Multiline second paragraph
-   
+
    Multiline 3rd paragraph
 
 === Multiline underinddented ===
 
-This will be treated as immediate end of definition list and treated as a 
+This will be treated as immediate end of definition list and treated as a
 paragraph
 
 {{{
 wrong1::
 :: definition first par
   underindented continuation - should end definition
-  
+
 wrong2::
 :: definition first par
     overindented continuation - should end definition
@@ -259,7 +259,7 @@ wrong2::
 wrong1::
 :: definition first par
   underindented continuation - should end definition
-  
+
 wrong2::
 :: definition first par
     overindented continuation - should end definition
@@ -285,6 +285,74 @@ wrong4::
 :: definition first par
 
     overindented paragraph - should end definition
+
+=== Multiline with lists ===
+
+Simple multiline definition with list:
+{{{
+def::
+:: term
+   * list item 1
+   * list item 2
+}}}
+
+def::
+:: term
+   * list item 1
+   * list item 2
+
+And another one with nested list:
+
+{{{
+def::
+:: term
+   * list item 1
+     * list item 2
+   * list item 3
+     * list item 4
+}}}
+
+def::
+:: term
+   * list item 1
+     * list item 2
+   * list item 3
+     * list item 4
+
+And finally:
+
+{{{
+def::
+:: term
+
+   * list item 1
+     * list item 2
+
+   another para
+
+   * item 1
+   * item 2
+   
+   and so on
+
+   and last para
+}}}
+
+
+def::
+:: term
+
+   * fist item 1
+     * list item 2
+
+   another para
+
+   * item 1
+   * item 2
+
+   and so on
+
+   and last para
 
 == Not supported ==
 
