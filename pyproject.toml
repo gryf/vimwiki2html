@@ -8,7 +8,7 @@ dynamic = ["version"]
 authors = [
     {name = "Roman Dobosz", email = "gryf73@gmail.com"}
 ]
-license = "MIT License"
+license = "MIT"
 license-files = ["LICENSE"]
 description = "Parse and generate html out of vimwiki source files"
 readme = "README.rst"
