@@ -166,7 +166,8 @@ class VimWiki2HTMLConverter:
             self.css_name = args.stylesheet
 
         if not self.css_name:
-            LOG.warning("No CSS file provided, using none.")
+            LOG.info("No CSS file provided, will try to get one from the "
+                     "template.")
 
         # setting force flag
         self.force = args.force if args.force else self.force
@@ -226,18 +227,23 @@ class VimWiki2HTMLConverter:
                 with open(path) as fobj:
                     template_content = fobj.read()
                 self.copy_template_assets(template_content)
+                return template_content
             except OSError:
                 LOG.error('Error loading template "%s", ignoring.',
                           template)
-        else:
+
+        # using default template
+        if self._template_fname:
             try:
                 with open(self._template_fname) as fobj:
                     template_content = fobj.read()
+                return template_content
             except OSError:
                 LOG.error('Error loading template "%s", ignoring.',
                           self._template_fname)
 
-        return template_content
+        # failsafe, if no other templates are around
+        return self._template
 
     def copy_template_assets(self, template_content):
         """
@@ -401,6 +407,12 @@ class VimWiki2HTMLConverter:
                     self.assets.append(_fname)
 
     def read_config(self, config_file, source):
+        if not os.path.exists(config_file):
+            LOG.info("Config file '%s' doesn't exists. Ignoring", config_file)
+            return
+
+        config_file = _validate_file_or_dir(config_file)
+
         potential_path = None
         if self.path:
             potential_path = self.path
@@ -530,8 +542,7 @@ def parse_args():
                         help="Template file")
     parser.add_argument('-s', '--stylesheet', type=_validate_file_or_dir,
                         help="CSS stylesheet file")
-    parser.add_argument('-c', '--config',  type=_validate_file_or_dir,
-                        nargs="?", default=CONF_PATH,
+    parser.add_argument('-c', '--config', default=CONF_PATH,
                         help="Alternative config file. if not provided it "
                         "will skip loading confoguration")
     parser.add_argument('-f', '--force', action='store_true', help="Convert "
