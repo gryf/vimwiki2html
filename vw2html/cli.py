@@ -269,12 +269,17 @@ class VimWiki2HTMLConverter:
             LOG.debug("Seems like there is no valid template")
             return
 
+        if os.path.exists(os.path.join(self.path, 'favicon.ico')):
+            src_fname = abspath(os.path.join(self.path, 'favicon.ico'))
+            outdir = self.path_html
+            os.makedirs(outdir, exist_ok=True)
+            shutil.copy(src_fname, outdir)
+
         assets = []
         paths = get_script_link_paths(dom)
 
         LOG.info("Gathering data out of css/js files")
 
-        assets = []
         for type_, path in paths:
             LOG.debug("Processing file %s of type %s", path, type_)
             # assume %root_path% is vimwiki root path in this case
