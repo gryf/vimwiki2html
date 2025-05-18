@@ -756,11 +756,13 @@ class VimWiki2Html:
         parts = string.split('|')
         if len(parts) == 3:
             if parts[1]:
-                template = f'<img src="%s" alt="{parts[1]}" {parts[2]}/>'
+                template = (f'<img src="%s" '
+                            f'alt="{parts[1].replace("%", "%%")}" '
+                            f'{parts[2]}/>')
             else:
                 template = f'<img src="%s" {parts[2]}/>'
         elif len(parts) == 2:
-            template = f'<img src="%s" alt="{parts[1]}"/>'
+            template = f'<img src="%s" alt="{parts[1].replace("%", "%%")}"/>'
         else:
             template = '<img src="%s"/>'
 
