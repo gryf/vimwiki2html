@@ -839,12 +839,7 @@ class VimWiki2Html:
             if not (link[0].isalpha() and link[1] == ':'
                     and os.path.isabs(link)):
                 link = os.path.expandvars(os.path.expanduser(link))
-                link = os.path.abspath(os.path.join(self.root, link))
-                if link in self.assets:
-                    link = self._copy_asset(link)
-                elif self.root in link:
-                    link = os.path.relpath(os.path.join(self.root, link),
-                                           start=self.root)
+                link = self._copy_asset(link)
             return template % (link, attrs, description)
 
         # absolute links
