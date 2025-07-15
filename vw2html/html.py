@@ -249,7 +249,8 @@ re_list = re.compile(r'^(\s*)([\*\-#]|[\d]+[\.\)])\s(?:\[([^]])\]\s?)?'
                      r'(.*)$')
 re_indented_text = re.compile(r'^(\s+)(.*)$')
 # TODO(gryf): make tag list configurable
-re_safe_html = re.compile(r'<(\s*/*(?!(?:b|i|u|sub|sup|kbd|br|hr))\w.*?)>')
+re_safe_html = re.compile(r'<(\s*/*(?!(?:b|i|u|sub|sup|kbd|br|hr|center))'
+                          r'\w.*?)>')
 re_bare_links = re.compile(r'(?<!\w)'
                            r'((?:http:|https:|ftp:|mailto:|www\.)/*[^\s]+)')
 re_wiki_links = re.compile(r'\[\[(?P<contents>.+?)\]\]')
@@ -415,6 +416,9 @@ class VimWiki2Html:
         lines = []
         if self._deflist:
             lines.append(self._deflist.render())
+        if self._table:
+            lines.append(self._table.render())
+            self._table = False
         close_para(self._state.para, lines)
         lines.extend(self._close_lists())
         ldest.extend(lines)
@@ -1085,7 +1089,7 @@ class VimWiki2Html:
                 self._table = False
                 #self._line_processed = True
                 return lines
-            return
+            return []
 
         line = self._apply_attrs(line)
         if not self._table:
