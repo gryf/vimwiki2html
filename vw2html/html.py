@@ -225,6 +225,7 @@ re_ph_title = re.compile(r'^\s*%title\s(.*)$', flags=re.MULTILINE)
 re_ph_template = re.compile(r'^\s*%template\s(.*)$', flags=re.MULTILINE)
 re_ph_date = re.compile(r'^\s*%date\s(.*)$', flags=re.MULTILINE)
 # re_ph_plainhtml = re.compile(r'^\s*%plainhtml\s(.*)$', flags=re.MULTILINE)
+re_ph_toc = re.compile(r'(^\s*)(%toc)(\s*)$', flags=re.MULTILINE)
 
 re_ml_comment = re.compile(r'%%\+.*?\+%%', flags=re.DOTALL)
 re_codeblock = re.compile(r'^(\s*){{3}([^\n]*?)(\n.*?)\n^\s*}{3}\s*$',
@@ -276,6 +277,7 @@ class VimWiki2Html:
     inline_code_mark = " 󿿼󿿼{}󿿼󿿼"
     links_mark = " 󿿻󿿻{}󿿻󿿻"
     images_mark = "󿿺󿿺{}󿿺󿿺"
+    toc_mark = " 󿿹󿿹󿿹󿿹"
 
     template_ext = 'tpl'
 
@@ -301,6 +303,7 @@ class VimWiki2Html:
         self._line_processed = False
         self._lists = []
         self._deflist = None
+        self._toc = None
 
     def get_output_path(self):
         # get relative link out of self.root
@@ -331,6 +334,8 @@ class VimWiki2Html:
             _html = _html.replace(self.links_mark.format(index), contents)
         for index, contents in enumerate(self._images):
             _html = _html.replace(self.images_mark.format(index), contents)
+        if self._toc:
+            _html = _html.replace(self.toc_mark, self._toc)
 
         return _html
 
@@ -354,6 +359,7 @@ class VimWiki2Html:
         self._find_title()
         self._find_template()
         self._find_date()
+        self._find_toc()
 
         converted = self._process_linewise()
         self._html = '\n'.join(converted)
@@ -724,6 +730,22 @@ class VimWiki2Html:
             # argument?
             # TODO: support TZ for current date
             self.date = datetime.datetime.now().strftime('%Y-%m-%d')
+
+    def _find_toc(self):
+        """
+        Search for %toc placeholder. If found set title and remove the line
+        from source wiki.
+        """
+        result = re_ph_toc.search(self.wiki_contents)
+
+        if not result:
+            return
+
+        toc = self._parse_toc()
+        if toc:
+            self._toc = toc
+            self.wiki_contents = re_ph_toc.sub(rf'\1{self.toc_mark}\3',
+                                               self.wiki_contents)
 
     def _handle_links(self, line):
         # transclusions
@@ -1102,6 +1124,50 @@ class VimWiki2Html:
         # processed
         self._line_processed = True
         return []
+
+    def _parse_toc(self):
+        data = []
+        current_level = None
+
+        for line in self.wiki_contents.split('\n'):
+            header = re_header.match(line)
+            if not header:
+                continue
+            open_level, title, close_level = header.groups()
+            open_level = open_level.strip()
+            close_level = close_level.strip()
+            if open_level != close_level:
+                # Warning will be issued when parsing headers, ignore
+                continue
+            level = len(open_level)
+            if level > self.max_header_level:
+                # Warning will be issued when parsing headers, ignore
+                continue
+            title = _id = header["title"].strip()
+            title = self._apply_attrs(title)
+            data.append((level, title, _id))
+
+        current_level = min([x[0] for x in data])
+        html = []
+        for level, title, _id in data:
+            if level > current_level:
+                html.append('<ul>\n<li>' * (level - current_level))
+                current_level = level
+            elif level < current_level:
+                html.append('</li>\n')
+                html.extend(['</ul>\n</li>\n'
+                             for _ in range(current_level - level)])
+                html.append('<li>\n')
+                current_level = level
+            elif not html:
+                html.append('<li>')
+            else:
+                html.append('</li>\n<li>')
+            html.append(f'<a href="#{_id}">{title}</a>')
+
+        html.extend(['</li>\n</ul>\n'
+                     for i in range(current_level - 1, -1, -1)])
+        return "<nav>\n<ul>" + "".join(html) + "</nav>"
 
 
 def close_para(para, ldest):

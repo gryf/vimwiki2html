@@ -246,6 +246,11 @@ What's supported
     tags which follows that placeholder. It's inline only, which means no span
     on multiple lines, although this placeholder can be repeated several times)
 
+  - ``%toc`` - This is additional placeholder, which doesn't exists in VimWiki
+    and will be replaced with table of contents in similar way how
+    ``VimwikiTOC`` operates but it will be generated during html conversion,
+    which makes the ToC always up to date.
+
   - Template placeholders
 
     - ``%root_path%``
