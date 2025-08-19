@@ -17,6 +17,9 @@ template_default = 'default'
 template_ext = '.tpl'
 # Absolute path to the css stylesheet.
 css_name = ''
+# Header level to ignore with TOC, 0 means include all
+skip_toc_level = 0
+
 
 [[vimwiki]]
 path = "~/vimwiki"

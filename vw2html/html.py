@@ -1151,7 +1151,7 @@ class VimWiki2Html:
             html.append(f'<a href="#{_id}">{title}</a>')
 
         html.extend(['</li>\n</ul>\n'
-                     for i in range(current_level - self.skip_toc_level + 1,
+                     for i in range(current_level - (self.skip_toc_level + 1),
                                     -1, -1)])
         return "<nav>\n<ul>" + "".join(html) + "</nav>"
 

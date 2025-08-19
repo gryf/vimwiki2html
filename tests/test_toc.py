@@ -1,14 +1,21 @@
 import unittest
 from unittest import mock
 
-from vw2html.html import VimWiki2Html
+from vw2html import cli
+from vw2html import html
 
 
 class TestTableOfContents(unittest.TestCase):
 
+    @mock.patch.multiple('vw2html.cli.VimWiki2HTMLConverter',
+                        update=mock.MagicMock(return_value=None),
+                        read_config=mock.MagicMock(return_value=None))
     def setUp(self):
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/wiki',
-                                      '/tmp/wiki_html', [])
+        conf = cli.VimWiki2HTMLConverter(mock.MagicMock())
+        conf.path = '/tmp/wiki'
+        conf.path_html = '/tmp/wiki_html'
+        conf.skip_toc_level = 0
+        self.converter = html.VimWiki2Html('/tmp/wiki/foo.wiki', conf)
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 
@@ -49,6 +56,65 @@ class TestTableOfContents(unittest.TestCase):
                '<h2 id="baz"><a href="#baz">baz</a></h2>\n\n'
                '<h3 id="lorem"><a href="#lorem">lorem</a></h3>\n\n'
                '<h1 id="ipsum"><a href="#ipsum">ipsum</a></h1>\n')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+    def test_toc_without_headers(self):
+        src = '%toc\n'
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, '')
+
+class TestTableOfContentsFirstLevel(unittest.TestCase):
+
+    @mock.patch.multiple('vw2html.cli.VimWiki2HTMLConverter',
+                        update=mock.MagicMock(return_value=None),
+                        read_config=mock.MagicMock(return_value=None))
+    def setUp(self):
+        conf = cli.VimWiki2HTMLConverter(mock.MagicMock())
+        conf.path = '/tmp/wiki'
+        conf.path_html = '/tmp/wiki_html'
+        conf.skip_toc_level = 1
+        self.converter = html.VimWiki2Html('/tmp/wiki/foo.wiki', conf)
+        # don't read any file
+        self.converter.read_wiki_file = mock.MagicMock(return_value=None)
+
+    def test_toc_without_items_on_first_level(self):
+        src = '%toc\n\n=foo=\n==bar==\n'
+        exp = ('<p>\n<nav>\n'
+               '<ul><li><a href="#bar">bar</a></li>\n</ul>\n'
+               '</nav>\n</p>\n\n'
+               '<h1 id="foo"><a href="#foo">foo</a></h1>\n\n'
+               '<h2 id="bar"><a href="#bar">bar</a></h2>\n')
+
+        self.converter.wiki_contents = src
+        self.converter.convert()
+        self.assertEqual(self.converter.html, exp)
+
+class TestTableOfContentsSecondLevel(unittest.TestCase):
+
+    @mock.patch.multiple('vw2html.cli.VimWiki2HTMLConverter',
+                        update=mock.MagicMock(return_value=None),
+                        read_config=mock.MagicMock(return_value=None))
+    def setUp(self):
+        conf = cli.VimWiki2HTMLConverter(mock.MagicMock())
+        conf.path = '/tmp/wiki'
+        conf.path_html = '/tmp/wiki_html'
+        conf.skip_toc_level = 2
+        self.converter = html.VimWiki2Html('/tmp/wiki/foo.wiki', conf)
+        # don't read any file
+        self.converter.read_wiki_file = mock.MagicMock(return_value=None)
+
+    def test_toc_without_items_on_first_level(self):
+        src = '%toc\n\n=foo=\n==bar==\n===baz==='
+        exp = ('<p>\n<nav>\n'
+               '<ul><li><a href="#baz">baz</a></li>\n</ul>\n'
+               '</nav>\n</p>\n\n'
+               '<h1 id="foo"><a href="#foo">foo</a></h1>\n\n'
+               '<h2 id="bar"><a href="#bar">bar</a></h2>\n\n'
+               '<h3 id="baz"><a href="#baz">baz</a></h3>\n')
 
         self.converter.wiki_contents = src
         self.converter.convert()
