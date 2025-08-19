@@ -111,6 +111,8 @@ possible options are listed below:
    template_ext = '.tpl'
    # Absolute path to the css stylesheet.
    css_name = ''
+   # Header level to ignore with TOC, 0 means include all
+   skip_toc_level = 0
    # If set to false, conversion will execute wiki after wiki. Usefull for
    # debugging.
    convert_async = true
@@ -137,6 +139,7 @@ using defaults, so in this case:
 - ``template_default`` will be ``default``
 - ``template_ext`` will be ``.tpl``
 - ``css_name`` will be none
+- ``skip_toc_level`` will be 0
 
 in other words:
 
@@ -249,7 +252,8 @@ What's supported
   - ``%toc`` - This is additional placeholder, which doesn't exists in VimWiki
     and will be replaced with table of contents in similar way how
     ``VimwikiTOC`` operates but it will be generated during html conversion,
-    which makes the ToC always up to date.
+    which makes the ToC always up to date. There is also a config option to
+    specify which header up to toplevel toc should ignore.
 
   - Template placeholders
 
