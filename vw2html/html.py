@@ -3,7 +3,6 @@ This is kind of translation from vimwiki html export file to python. Well, not
 excact translation, for some portion of convertion implementation has been
 done from scratch.
 """
-import dataclasses
 import datetime
 import html
 import logging
@@ -21,21 +20,6 @@ except ImportError:
 
 
 LOG = logging.getLogger()
-
-
-@dataclasses.dataclass
-class State:
-    para: bool = False
-    quote: bool = False
-    list_leading_spaces: bool = False
-    # [in_math, indent_math]
-    math: list[int, str] = dataclasses.field(default_factory=list)
-    deflist: bool = False
-    lists: list = dataclasses.field(default_factory=list)
-    # [last seen header text in this level, number]
-    header_ids: list = dataclasses.field(default_factory=list)
-    # [][['', 0], ['', 0], ['', 0],
-    #                    ['', 0], ['', 0], ['', 0]]
 
 
 class List:
@@ -299,7 +283,7 @@ class VimWiki2Html:
         self._links = []
         self._images = []
         self._inline_codes_count = 0
-        self._state = State()
+        self._para = False
         self._line_processed = False
         self._lists = []
         self._deflist = None
@@ -369,13 +353,6 @@ class VimWiki2Html:
 
         ldest = []
 
-        # current state of converter
-        self._state.math = [0, 0]  # [in_math, indent_math]
-        self._state.deflist = 0
-        # [last seen header text in this level, number]
-        self._state.header_ids = [['', 0], ['', 0], ['', 0],
-                                  ['', 0], ['', 0], ['', 0]]
-
         self._previus_line = None
         for line in lsource:
 
@@ -425,7 +402,7 @@ class VimWiki2Html:
         if self._table:
             lines.append(self._table.render())
             self._table = False
-        close_para(self._state.para, lines)
+        close_para(self._para, lines)
         lines.extend(self._close_lists())
         ldest.extend(lines)
 
@@ -460,16 +437,16 @@ class VimWiki2Html:
     def _handle_paragraph(self, line):
         lines = []
         if line.strip():
-            if not self._state.para:
+            if not self._para:
                 lines.append('<p>')
-                self._state.para = True
+                self._para = True
             self._line_processed = True
             # default is to ignore newlines (i.e. do not insert <br/> at the
             # end of the line)
             lines.append(line)
-        elif self._state.para and line.strip() == '':
+        elif self._para and line.strip() == '':
             lines.append('</p>')
-            self._state.para = False
+            self._para = False
 
         return lines
 

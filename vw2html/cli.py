@@ -51,6 +51,10 @@ def get_script_link_paths(elem):
     return ret_elems
 
 class VimWiki2HTMLConverter:
+    """
+    Read commandline arguments from argparse, read and merge them with config
+    file, prepare environment for the VimWiki2Html converter, and run it.
+    """
     # Root path for the wiki, potentially used in templates and it
     # must be set either by configuration, or through commandline.
     path: str = None  # '~/vimwiki'
@@ -100,7 +104,7 @@ class VimWiki2HTMLConverter:
         self.assets = []
         self.update(args)
 
-    def update(self, args):
+    def update(self, args):  # noqa: PLR0912 C901
         LOG.debug("Updating arguments")
         # root path
         self.path = args.root if args.root else self.path
@@ -227,34 +231,33 @@ class VimWiki2HTMLConverter:
                 with open(path) as fobj:
                     template_content = fobj.read()
                 self.copy_template_assets(template_content)
-                return template_content
+                return template_content  # noqa: TRY300
             except OSError:
-                LOG.error('Error loading template "%s", ignoring.',
+                LOG.error('Error loading template "%s", ignoring.',  # noqa: TRY400
                           template)
 
         # using default template
         if self._template_fname:
             try:
                 with open(self._template_fname) as fobj:
-                    template_content = fobj.read()
-                return template_content
+                    return fobj.read()
             except OSError:
-                LOG.error('Error loading template "%s", ignoring.',
+                LOG.error('Error loading template "%s", ignoring.',  # noqa: TRY400
                           self._template_fname)
 
         # failsafe, if no other templates are around
         return self._template
 
-    def copy_template_assets(self, template_content):
+    def copy_template_assets(self, template_content):  # noqa: PLR0915 PLR0912 C901
         """
         Analyse template file contents in context of stylesheets and
         javascript files and copy them with all their assets to destination
         directory.
         """
         try:
-            doc = xml.dom.minidom.parseString(template_content)
+            doc = xml.dom.minidom.parseString(template_content)  # noqa: S318
         except xml.parsers.expat.ExpatError as err:
-            LOG.error("All CSS assets will be ignored as there is an issue "
+            LOG.error("All CSS assets will be ignored as there is an issue "  # noqa: TRY400
                       "with HTML template: %s", err)
             return
         dom = None
@@ -362,7 +365,7 @@ class VimWiki2HTMLConverter:
                                     # to finish
 
                 except multiprocessing.context.TimeoutError:
-                    LOG.error("Processing files took abnormally long, still "
+                    LOG.error("Processing files took abnormally long, still "  # noqa: TRY400
                               "trying to finish the process, you might use "
                               "Ctrl+C to abort the conversion")
                     wait_time = 1
@@ -372,12 +375,12 @@ class VimWiki2HTMLConverter:
                             break
                         except multiprocessing.context.TimeoutError:
                             wait_time *= 2
-                            LOG.error("Still trying… waiting another %s "
+                            LOG.error("Still trying… waiting another %s "  # noqa: TRY400
                                       "seconds", wait_time)
                             continue
-            return 0
+            return 0  # noqa: TRY300
         except KeyboardInterrupt:
-            LOG.error("Interrupted, conversion is not complete")
+            LOG.error("Interrupted, conversion is not complete")  # noqa: TRY400
             return 1
 
     def _convert(self, filepath):
@@ -411,7 +414,7 @@ class VimWiki2HTMLConverter:
                 else:
                     self.assets.append(_fname)
 
-    def read_config(self, config_file, source):
+    def read_config(self, config_file, source):  # noqa: PLR0912 C901
         if not os.path.exists(config_file):
             LOG.info("Config file '%s' doesn't exists. Ignoring", config_file)
             return
@@ -431,7 +434,7 @@ class VimWiki2HTMLConverter:
             with open(config_file, "rb") as fobj:
                 toml = tomllib.load(fobj)
         except (OSError, ValueError):
-            LOG.error("Exception on reading config file '%s'. Ignoring.",
+            LOG.error("Exception on reading config file '%s'. Ignoring.",  # noqa: TRY400
                       config_file)
             return
 
@@ -491,13 +494,13 @@ def _validate_output(path):
             os.unlink(test_fn)
         except (PermissionError, OSError) as exc:
             msg = f"Cannot access '{path}': {exc.strerror}."
-            raise argparse.ArgumentTypeError(msg)
+            raise argparse.ArgumentTypeError(msg)  # noqa: B904
     else:
         try:
             os.makedirs(path)
         except (PermissionError, OSError) as exc:
             msg = f"Cannot create '{path}': {exc.strerror}."
-            raise argparse.ArgumentTypeError(msg)
+            raise argparse.ArgumentTypeError(msg)  # noqa: B904
     return path
 
 def get_verbose(verbose_level, quiet_level):
