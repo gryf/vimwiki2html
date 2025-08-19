@@ -394,7 +394,7 @@ class VimWiki2Html:
             self._previus_line = line
 
         # remove blank lines
-        while len(ldest) and ldest[-1].strip() == '':
+        while ldest and ldest[-1].strip() == '':
             del ldest[-1]
 
         # process end of file
@@ -709,7 +709,8 @@ class VimWiki2Html:
             # TODO: support different date formats - another commandline
             # argument?
             # TODO: support TZ for current date
-            self.date = datetime.datetime.now().strftime('%Y-%m-%d')
+            self.date = datetime.datetime.now(tz=datetime
+                                              .UTC).strftime('%Y-%m-%d')
 
     def _find_toc(self):
         """
@@ -733,44 +734,46 @@ class VimWiki2Html:
     def _handle_links(self, line):
         # transclusions
         for link in re_transclusion_links.finditer(line):
-            img = self._get_img_out_of_string(link.groupdict()['contents'])
             line = re_transclusion_links.sub(self.images_mark
                                              .format(len(self._images)),
                                              line, count=1)
-            self._images.append(img)
+            self._images.append(self._get_img_out_of_string(link.groupdict()
+                                                            ['contents']))
 
         # wiki links
         for link in re_html_links.finditer(line):
-            link = self._get_link_out_of_string(link.groupdict()['contents'])
             line = re_html_links.sub(self.links_mark.format(len(self._links)),
                                      line, count=1)
-            self._links.append(link)
+            self._links.append(self._get_link_out_of_string(link.groupdict()
+                                                            ['contents']))
 
         # wiki links
         for link in re_wiki_links.finditer(line):
-            link = self._get_link_out_of_string(link.groupdict()['contents'])
             line = re_wiki_links.sub(self.links_mark.format(len(self._links)),
                                      line, count=1)
-            self._links.append(link)
+            self._links.append(self._get_link_out_of_string(link.groupdict()
+                                                            ['contents']))
 
         # bare links
         for link in re_bare_links.finditer(line):
-            link = f'<a href="{link.groups()[0]}">{link.groups()[0]}</a>'
             line = re_bare_links.sub(self.links_mark.format(len(self._links)),
                                      line, count=1)
-            self._links.append(link)
+            self._links.append(f'<a href="{link.groups()[0]}">'
+                               f'{link.groups()[0]}</a>')
         return line
 
     def _get_img_out_of_string(self, string):
+        alt_attrs_dest = 3
+        attrs_dest = 2
         parts = string.split('|')
-        if len(parts) == 3:
+        if len(parts) == alt_attrs_dest:
             if parts[1]:
                 template = (f'<img src="%s" '
                             f'alt="{parts[1].replace("%", "%%")}" '
                             f'{parts[2]}/>')
             else:
                 template = f'<img src="%s" {parts[2]}/>'
-        elif len(parts) == 2:
+        elif len(parts) == attrs_dest:
             template = f'<img src="%s" alt="{parts[1].replace("%", "%%")}"/>'
         else:
             template = '<img src="%s"/>'
