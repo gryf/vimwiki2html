@@ -2,14 +2,20 @@ import datetime
 import unittest
 from unittest import mock
 
-from vw2html.html import VimWiki2Html
+from vw2html import cli
+from vw2html import html
 
 
 class TestComments(unittest.TestCase):
 
+    @mock.patch.multiple('vw2html.cli.VimWiki2HTMLConverter',
+                        update=mock.MagicMock(return_value=None),
+                        read_config=mock.MagicMock(return_value=None))
     def setUp(self):
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/wiki',
-                                      '/tmp/wiki_html', [])
+        conf = cli.VimWiki2HTMLConverter(mock.MagicMock())
+        conf.path = '/tmp/wiki'
+        conf.path_html = '/tmp/wiki_html'
+        self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', conf)
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 
@@ -54,9 +60,14 @@ class TestComments(unittest.TestCase):
 
 class TestTitlePlaceholder(unittest.TestCase):
 
+    @mock.patch.multiple('vw2html.cli.VimWiki2HTMLConverter',
+                        update=mock.MagicMock(return_value=None),
+                        read_config=mock.MagicMock(return_value=None))
     def setUp(self):
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/wiki',
-                                      '/tmp/wiki_html', [])
+        conf = cli.VimWiki2HTMLConverter(mock.MagicMock())
+        conf.path = '/tmp/wiki'
+        conf.path_html = '/tmp/wiki_html'
+        self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', conf)
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 
@@ -93,10 +104,15 @@ class TestTitlePlaceholder(unittest.TestCase):
 
 class TestNoHtmlPlaceholder(unittest.TestCase):
 
+    @mock.patch.multiple('vw2html.cli.VimWiki2HTMLConverter',
+                        update=mock.MagicMock(return_value=None),
+                        read_config=mock.MagicMock(return_value=None))
     def setUp(self):
         # don't read any file
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/wiki',
-                                      '/tmp/wiki_html', [])
+        conf = cli.VimWiki2HTMLConverter(mock.MagicMock())
+        conf.path = '/tmp/wiki'
+        conf.path_html = '/tmp/wiki_html'
+        self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', conf)
 
     def test_nohtml_set(self):
         src = '%nohtml'
@@ -117,10 +133,15 @@ class TestNoHtmlPlaceholder(unittest.TestCase):
 
 class TestTemplatePlaceholder(unittest.TestCase):
 
+    @mock.patch.multiple('vw2html.cli.VimWiki2HTMLConverter',
+                        update=mock.MagicMock(return_value=None),
+                        read_config=mock.MagicMock(return_value=None))
     def setUp(self):
         # don't read any file
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/wiki',
-                                      '/tmp/wiki_html', [])
+        conf = cli.VimWiki2HTMLConverter(mock.MagicMock())
+        conf.path = '/tmp/wiki'
+        conf.path_html = '/tmp/wiki_html'
+        self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', conf)
 
     def test_template_without_arg(self):
         src = '%template'
@@ -149,10 +170,15 @@ class TestTemplatePlaceholder(unittest.TestCase):
 
 class TestDatePlaceholder(unittest.TestCase):
 
+    @mock.patch.multiple('vw2html.cli.VimWiki2HTMLConverter',
+                        update=mock.MagicMock(return_value=None),
+                        read_config=mock.MagicMock(return_value=None))
     def setUp(self):
         # don't read any file
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/wiki',
-                                      '/tmp/wiki_html', [])
+        conf = cli.VimWiki2HTMLConverter(mock.MagicMock())
+        conf.path = '/tmp/wiki'
+        conf.path_html = '/tmp/wiki_html'
+        self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', conf)
 
     def test_no_date(self):
         src = 'date'
@@ -182,10 +208,15 @@ class TestDatePlaceholder(unittest.TestCase):
 
 class TestPlainHTMLPlaceholder(unittest.TestCase):
 
+    @mock.patch.multiple('vw2html.cli.VimWiki2HTMLConverter',
+                        update=mock.MagicMock(return_value=None),
+                        read_config=mock.MagicMock(return_value=None))
     def setUp(self):
         # don't read any file
-        self.converter = VimWiki2Html('/tmp/src/foo.wiki', '/tmp/wiki',
-                                      '/tmp/wiki_html', [])
+        conf = cli.VimWiki2HTMLConverter(mock.MagicMock())
+        conf.path = '/tmp/wiki'
+        conf.path_html = '/tmp/wiki_html'
+        self.converter = html.VimWiki2Html('/tmp/src/foo.wiki', conf)
 
     def test_no_placeholder(self):
         src = 'foo'

@@ -1,14 +1,20 @@
 import unittest
 from unittest import mock
 
-from vw2html.html import VimWiki2Html
+from vw2html import cli
+from vw2html import html
 
 
 class TestParagraph(unittest.TestCase):
 
+    @mock.patch.multiple('vw2html.cli.VimWiki2HTMLConverter',
+                        update=mock.MagicMock(return_value=None),
+                        read_config=mock.MagicMock(return_value=None))
     def setUp(self):
-        self.converter = VimWiki2Html('/tmp/wiki/foo.wiki', '/tmp/wiki',
-                                      '/tmp/wiki_html', [])
+        conf = cli.VimWiki2HTMLConverter(mock.MagicMock())
+        conf.path = '/tmp/wiki'
+        conf.path_html = '/tmp/wiki_html'
+        self.converter = html.VimWiki2Html('/tmp/wiki/foo.wiki', conf)
         # don't read any file
         self.converter.read_wiki_file = mock.MagicMock(return_value=None)
 
