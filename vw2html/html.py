@@ -45,6 +45,8 @@ class List:
     def __ge__(self, other):
         return len(self.indent) >= len(other.indent)
 
+    __hash__ = object.__hash__
+
 
 class Cell:
     def __init__(self, text):
@@ -113,7 +115,7 @@ class Table:
             return
         self.rows.append(row_list)
 
-    def _scan_table(self):
+    def _scan_table(self):  # noqa: C901
         table = [[None for _ in x] for x in self.rows]
 
         for x, row in enumerate(self.rows):
@@ -265,9 +267,9 @@ class VimWiki2Html:
 
     template_ext = 'tpl'
 
-    def __init__(self, wikifname, path, path_html, assets, skip_toc_level):
-        self.assets = assets
-        self.root = path
+    def __init__(self, wikifname, conf):
+        self.assets = conf.assets
+        self.root = conf.path
         self.template = None
         self.date = ''
         self.wiki_contents = None
@@ -275,7 +277,7 @@ class VimWiki2Html:
         self._html = ''
         self._table = False
         self.wiki_fname = wikifname
-        self.output_dir = path_html
+        self.output_dir = conf.path_html
         self.html_fname = self.get_output_path()
         self._title = None
         self._code_blocks = []
@@ -288,7 +290,7 @@ class VimWiki2Html:
         self._lists = []
         self._deflist = None
         self._toc = None
-        self.skip_toc_level = skip_toc_level
+        self.skip_toc_level = conf.skip_toc_level
 
     def get_output_path(self):
         # get relative link out of self.root
@@ -349,7 +351,7 @@ class VimWiki2Html:
         converted = self._process_linewise()
         self._html = '\n'.join(converted)
 
-    def _process_linewise(self):
+    def _process_linewise(self):  # noqa: C901
         lsource = self.wiki_contents.split('\n')
 
         ldest = []
@@ -424,7 +426,7 @@ class VimWiki2Html:
         """
         trigger = '%plainhtml'
         if trigger not in line:
-            return
+            return None
 
         self._line_processed = True
         lines = []
@@ -724,6 +726,9 @@ class VimWiki2Html:
             self._toc = toc
             self.wiki_contents = re_ph_toc.sub(rf'\1{self.toc_mark}\3',
                                                self.wiki_contents)
+        else:
+            # remove toc
+            self.wiki_contents = re_ph_toc.sub(r'\1\3', self.wiki_contents)
 
     def _handle_links(self, line):
         # transclusions
@@ -811,7 +816,7 @@ class VimWiki2Html:
         shutil.copy(fullpath, outpath)
         return filepath
 
-    def _get_link_out_of_string(self, string):
+    def _get_link_out_of_string(self, string):  # noqa: C901 PLR0911 PLR0912
         description = None
         attrs = ''
         if '|' in string:
@@ -890,14 +895,14 @@ class VimWiki2Html:
 
         raise ValueError(string)
 
-    def _handle_list_definitions(self, line):
+    def _handle_list_definitions(self, line):  # noqa: C901 PLR0911 PLR0912
         """
         Handle definition lists
         """
         if not line.strip() and self._deflist:
             # might be continuation on new line
             self._line_processed = True
-            return
+            return None
 
         match = re_listdef.match(line)
 
@@ -910,17 +915,18 @@ class VimWiki2Html:
                 if self._lists:
                     list_frag = self._handle_list(line)
                     if list_frag:
-                        self._deflist.add_to_def(''.join(list_frag), False)
+                        self._deflist.add_to_def(''.join(list_frag),
+                                                 new_para=False)
                         if self._lists:  # list not closed yet
                             self._line_processed = True
-                            return
+                            return None
 
                 if indent == self._deflist.indent and list_frag and not self._lists:
                     self._deflist.add_to_def(self._apply_attrs(line.strip()),
                                              new_para)
 
                     self._line_processed = True
-                    return
+                    return None
 
                 if indent == self._deflist.indent:
                     html =  self._handle_list(line)
@@ -930,16 +936,16 @@ class VimWiki2Html:
                         self._deflist.add_to_def(self._apply_attrs(line.strip()),
                                                  new_para)
                     self._line_processed = True
-                    return
+                    return None
 
                 if self._lists:
                     self._deflist.add_to_def(''.join(self._close_lists()),
-                                             False)
+                                             new_para=False)
 
                 html = self._deflist.render()
                 self._deflist = None
                 return html
-            return
+            return None
 
         self._line_processed = True
         title, definition = match.groups()
@@ -951,7 +957,8 @@ class VimWiki2Html:
             definition = self._apply_attrs(definition.strip())
 
         if self._deflist and self._lists:
-            self._deflist.add_to_def(''.join(self._close_lists()), False)
+            self._deflist.add_to_def(''.join(self._close_lists()),
+                                     new_para=False)
 
         if not self._deflist:
             self._deflist = DefinitionList()
@@ -960,9 +967,9 @@ class VimWiki2Html:
         if indent is not None:
             self._deflist.indent = indent
 
-        return
+        return None
 
-    def _handle_list(self, line):
+    def _handle_list(self, line):  # noqa: C901 PLR0911 PLR0912
         """
         Handle possible list item. Return html line(s) or untouched line.
 
@@ -977,14 +984,6 @@ class VimWiki2Html:
 
         # prepare regexps for lists
         bullets = ['-', '*']
-        numbers = (r'('
-                   r'\d+\)|'
-                   r'\d+\.|'
-                   r'[ivxlcdm]+\)|'
-                   r'[IVXLCDM]+\)|'
-                   r'[a-z]{1,2}\)|'
-                   r'[A-Z]{1,2}\)'
-                   ')')
 
         checkbox_defaults = {'-': 'rejected',
                              ' ': 'done0',
@@ -1009,10 +1008,10 @@ class VimWiki2Html:
 
         if not match:
             if not self._lists:
-                return
+                return None
             match = re_indented_text.match(line)
             if not match:
-                return
+                return None
             indent, text = match.groups()
         else:
             indent, list_type, checkbox, text = match.groups()
@@ -1103,7 +1102,7 @@ class VimWiki2Html:
         self._line_processed = True
         return []
 
-    def _parse_toc(self):
+    def _parse_toc(self):  # noqa: C901
         data = []
         current_level = None
 
@@ -1126,6 +1125,9 @@ class VimWiki2Html:
             title = _id = header["title"].strip()
             title = self._apply_attrs(title)
             data.append((level, title, _id))
+
+        if not data:
+            return ""
 
         current_level = min([x[0] for x in data])
         html = []

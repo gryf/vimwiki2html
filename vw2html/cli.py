@@ -389,9 +389,7 @@ class VimWiki2HTMLConverter:
 
     def _convert(self, filepath):
         LOG.debug("Processing file %s", filepath)
-        wiki_obj = vw2html.html.VimWiki2Html(filepath, self.path,
-                                             self.path_html, self.assets,
-                                             self.skip_toc_level)
+        wiki_obj = vw2html.html.VimWiki2Html(filepath, self)
         source_mtime = 1
         dest_mtime = 0
         try:
