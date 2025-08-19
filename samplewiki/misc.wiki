@@ -65,3 +65,14 @@ meh
 
 `%nohtml` prevent from content of page containing such placeholder from
 conversion to html. This page: [[nohtml]] will not be converted.
+
+=== Toc placeholder ===
+
+This one is newly added feature, which doesn't exists with VimWiki, where user 
+need to issue ``:VimwikiTOC`` (or make it automatically executed on save using 
+``auto_toc`` option), it will replace ``%toc`` placeholder with generated 
+table of contents for current file on wiki-HTML conversion. Here are some
+samples:
+
+- sample toc: [[toc|toc1]]
+- empty toc: [[toc2]]

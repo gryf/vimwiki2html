@@ -1,0 +1,17 @@
+%toc
+
+above ``%toc`` should be replaced with clickable list:
+
+{{{
+* foo
+* bar
+  * baz
+    * lorem
+* ipsum
+}}}
+
+= foo =
+= bar =
+== baz ==
+=== lorem ===
+= ipsum =
