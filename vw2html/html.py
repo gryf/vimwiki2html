@@ -265,7 +265,7 @@ class VimWiki2Html:
 
     template_ext = 'tpl'
 
-    def __init__(self, wikifname, path, path_html, assets):
+    def __init__(self, wikifname, path, path_html, assets, skip_toc_level):
         self.assets = assets
         self.root = path
         self.template = None
@@ -288,6 +288,7 @@ class VimWiki2Html:
         self._lists = []
         self._deflist = None
         self._toc = None
+        self.skip_toc_level = skip_toc_level
 
     def get_output_path(self):
         # get relative link out of self.root
@@ -1120,6 +1121,8 @@ class VimWiki2Html:
             if level > self.max_header_level:
                 # Warning will be issued when parsing headers, ignore
                 continue
+            if level <= self.skip_toc_level:
+                continue
             title = _id = header["title"].strip()
             title = self._apply_attrs(title)
             data.append((level, title, _id))
@@ -1143,7 +1146,8 @@ class VimWiki2Html:
             html.append(f'<a href="#{_id}">{title}</a>')
 
         html.extend(['</li>\n</ul>\n'
-                     for i in range(current_level - 1, -1, -1)])
+                     for i in range(current_level - self.skip_toc_level + 1,
+                                    -1, -1)])
         return "<nav>\n<ul>" + "".join(html) + "</nav>"
 
 

@@ -76,6 +76,10 @@ class VimWiki2HTMLConverter:
     # processors, but for debugging it might be better to turn it off and make
     # conversion sequentially
     convert_async: bool = True
+    # skip toplevel headers for table of contents generation, by default
+    # include all. If provided integer larger then 0, all the headers less and
+    # equal for that value will be skipped
+    skip_toc_level: int = 0
 
     # converter specific defaults
     # force recreate/convert all wiki files passed to the converter
@@ -386,7 +390,8 @@ class VimWiki2HTMLConverter:
     def _convert(self, filepath):
         LOG.debug("Processing file %s", filepath)
         wiki_obj = vw2html.html.VimWiki2Html(filepath, self.path,
-                                             self.path_html, self.assets)
+                                             self.path_html, self.assets,
+                                             self.skip_toc_level)
         source_mtime = 1
         dest_mtime = 0
         try:
@@ -440,7 +445,8 @@ class VimWiki2HTMLConverter:
 
         legal_keys = ["css_name", "ext", "index", "path_html",
                       "template_default", "template_default", "template_ext",
-                      "template_path", 'path', 'force', 'convert_async']
+                      "template_path", 'path', 'force', 'convert_async',
+                      'skip_toc_level']
 
         conf_dict = {}
         if potential_path:
