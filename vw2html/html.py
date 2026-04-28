@@ -106,9 +106,9 @@ class Table:
             len(self.rows) == 1):
             self.first_row_header = True
             for row in row_list:
-                if row.startswith(':') and row.endswith(':'):
+                if row.strip().startswith(':') and row.strip().endswith(':'):
                     self._align.append('center')
-                elif row.endswith(':'):
+                elif row.strip().endswith(':'):
                     self._align.append('right')
                 else:
                     self._align.append('left')
@@ -245,7 +245,7 @@ re_transclusion_links = re.compile(r'(?<!{){{(?P<contents>[^}]+)}}(?!})')
 re_html_links = re.compile(r'\[\[(?P<contents>'
                            r'(?:http:|https:|ftp:|mailto:|www\.)?'
                            r'[^]]*)\]\]')
-re_table_header_sep = re.compile(r'\s?:?-+:?\s?')
+re_table_header_sep = re.compile(r'\s*?:?-+:?\s*')
 re_listdef = re.compile(r'^\s*(?P<title>.*)?::(?P<definition>\s.+)?\s*$')
 
 
